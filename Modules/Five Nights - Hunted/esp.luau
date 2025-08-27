@@ -1,5 +1,5 @@
 -- Modules/Five Nights - Hunted/esp.luau
--- ESP (Highlight-only): Players = Blue, Object-Players (sem Humanoid, marcados) = Orange
+-- ESP (Highlight-only): Players = Blue, NPCs/Objetos = Orange
 -- Controle de enable/disable é feito pela main.luau
 
 local Players = game:GetService("Players")
@@ -47,7 +47,7 @@ local function createHighlight(adorneeInst, color)
 	h.OutlineColor = color
 	h.OutlineTransparency = 0
 	h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-	h.Adornee = adorneeInst
+	h.Adornee = ad
 	h.Enabled = true
 	h.Parent = Workspace:FindFirstChildOfClass("Camera") or adorneeInst
 	return h
@@ -71,6 +71,16 @@ function ESP.create(opts)
 	return self
 end
 
+-- identifica se o Model realmente pertence a um Player
+function ESP:_isPlayerCharacter(model: Model)
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr.Character == model then
+			return true
+		end
+	end
+	return false
+end
+
 function ESP:_cleanupTrack(inst)
 	local t = self._tracked[inst]
 	if not t then return end
@@ -92,10 +102,10 @@ function ESP:_trackInstance(inst, ownerPlr, isPlayerChar)
 	local color
 	if isPlayerChar then
 		local hum = inst:FindFirstChildWhichIsA("Humanoid")
-		if hum then
-			color = COLORS.playerBlue
+		if hum and self:_isPlayerCharacter(inst) then
+			color = COLORS.playerBlue -- player real
 		else
-			color = COLORS.objectOrange
+			color = COLORS.objectOrange -- NPC/objeto
 		end
 	else
 		color = COLORS.objectOrange
@@ -157,12 +167,12 @@ function ESP:_updateOne(inst, data)
 		if data.highlight then data.highlight.Enabled = self.Enabled and within end
 	end
 
-	-- reforça cores com a regra corrigida
+	-- reforça cores
 	if data.highlight then
 		local color
 		if data.isPlayerChar then
 			local hum = inst:FindFirstChildWhichIsA("Humanoid")
-			if hum then
+			if hum and self:_isPlayerCharacter(inst) then
 				color = COLORS.playerBlue
 			else
 				color = COLORS.objectOrange
