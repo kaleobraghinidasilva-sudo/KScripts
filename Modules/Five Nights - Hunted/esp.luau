@@ -1,7 +1,8 @@
 -- Modules/Five Nights - Hunted/esp.luau
 -- ESP:
--- Player normal, morph com humanoid ou até sem humanoid = Azul
--- NPCs/Objetos (sem Player dono) = Laranja
+-- Azul = Player no avatar normal OU Player sem Humanoid (ex: dentro do armário)
+-- Laranja = Player em morph/objeto controlado
+-- Laranja = NPCs/objetos sem Player
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -17,7 +18,6 @@ local DEFAULTS = {
 	Enabled = false,
 	MaxDistance = 3000,
 	UpdateHz = 10,
-	ShowBillboard = false
 }
 local COLORS = {
 	playerBlue   = Color3.fromRGB(58,130,247),
@@ -61,7 +61,6 @@ function ESP.create(opts)
 	self.Enabled      = false
 	self.MaxDistance  = tonumber(opts.MaxDistance) or DEFAULTS.MaxDistance
 	self.UpdateHz     = tonumber(opts.UpdateHz) or DEFAULTS.UpdateHz
-	self.ShowBillboard= opts.ShowBillboard or false
 
 	self._tracked     = {}
 	self._accum       = 0
@@ -70,18 +69,26 @@ function ESP.create(opts)
 	return self
 end
 
--- Detecta se um model pertence a um Player (mesmo sem humanoid)
-function ESP:_belongsToPlayer(model: Model)
-	for _, plr in ipairs(Players:GetPlayers()) do
-		if plr.Character == model then
-			return true
-		end
-	end
-	-- fallback: alguns jogos clonam morphs nomeados com o nome do Player
-	if Players:FindFirstChild(model.Name) then
+-- Detecta se o Player está em avatar normal
+function ESP:_isNormalAvatar(model: Model, plr: Player)
+	if plr.Character ~= model then return false end
+	local head = model:FindFirstChild("Head")
+	local hrp = model:FindFirstChild("HumanoidRootPart")
+	local humanoid = model:FindFirstChildWhichIsA("Humanoid")
+	if head and hrp and humanoid then
 		return true
 	end
 	return false
+end
+
+-- Detecta se pertence a um Player (mesmo sem humanoid, ex: armário)
+function ESP:_belongsToPlayer(model: Model)
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr.Character == model then
+			return plr
+		end
+	end
+	return nil
 end
 
 function ESP:_cleanupTrack(inst)
@@ -99,12 +106,20 @@ function ESP:_trackInstance(inst, ownerPlr, isPlayerChar)
 	local bestPart = findBestPart(inst)
 	if not bestPart then return end
 
-	-- regra de cor
-	local color
-	if isPlayerChar and ownerPlr and self:_belongsToPlayer(inst) then
-		color = COLORS.playerBlue -- Player real (mesmo sem humanoid)
-	else
-		color = COLORS.objectOrange -- NPC ou objeto
+	local color = COLORS.objectOrange -- padrão
+
+	local plr = self:_belongsToPlayer(inst)
+	if plr then
+		if self:_isNormalAvatar(inst, plr) then
+			color = COLORS.playerBlue -- player no avatar normal
+		else
+			local humanoid = inst:FindFirstChildWhichIsA("Humanoid")
+			if humanoid then
+				color = COLORS.objectOrange -- morph/animatronic controlado
+			else
+				color = COLORS.playerBlue -- player sem humanoid (ex: armário)
+			end
+		end
 	end
 
 	local highlight = createHighlight(inst, color)
@@ -113,7 +128,7 @@ function ESP:_trackInstance(inst, ownerPlr, isPlayerChar)
 		highlight = highlight,
 		bestPart  = bestPart,
 		isPlayerChar = isPlayerChar,
-		ownerPlayer  = ownerPlr,
+		ownerPlayer  = plr,
 		conns     = {},
 	}
 	self._tracked[inst] = tr
@@ -161,11 +176,19 @@ function ESP:_updateOne(inst, data)
 	end
 
 	if data.highlight then
-		local color
-		if data.isPlayerChar and data.ownerPlayer and self:_belongsToPlayer(inst) then
-			color = COLORS.playerBlue -- Player real (mesmo sem humanoid)
-		else
-			color = COLORS.objectOrange
+		local color = COLORS.objectOrange
+		local plr = self:_belongsToPlayer(inst)
+		if plr then
+			if self:_isNormalAvatar(inst, plr) then
+				color = COLORS.playerBlue
+			else
+				local humanoid = inst:FindFirstChildWhichIsA("Humanoid")
+				if humanoid then
+					color = COLORS.objectOrange -- morph controlado
+				else
+					color = COLORS.playerBlue -- player sem humanoid (armário)
+				end
+			end
 		end
 		data.highlight.FillColor = color
 		data.highlight.OutlineColor = color
