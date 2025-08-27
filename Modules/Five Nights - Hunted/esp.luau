@@ -1,12 +1,10 @@
--- Modules/Five Nights - Hunted/ESP.luau
--- ESP (Highlight-only): Players = Blue, Object-Players (no Humanoid) = Orange
--- Controle de enable/disable é FEITO pela main (sem hotkeys aqui).
--- Expondo API: ESP.create(opts?) -> controller { Enable, Disable, Destroy, IsEnabled, InspectUnderMouse }
+-- Modules/Five Nights - Hunted/esp.luau
+-- ESP (Highlight-only): Players = Blue, Object-Players (sem Humanoid, marcados) = Orange
+-- Controle de enable/disable é feito pela main.luau
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local CollectionService = game:GetService("CollectionService")
-local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
 local LocalPlayer = Players.LocalPlayer
@@ -14,20 +12,20 @@ local LocalPlayer = Players.LocalPlayer
 local ESP = {}
 ESP.__index = ESP
 
--- ================== CONFIG DEFAULTS ==================
+-- ================== CONFIG ==================
 local DEFAULTS = {
 	Enabled = false,
-	MaxDistance = 3000,   -- studs
-	UpdateHz = 10,        -- updates per second
-	ShowBillboard = false -- labels desativados
+	MaxDistance = 3000,
+	UpdateHz = 10,
+	ShowBillboard = false
 }
 local COLORS = {
 	playerBlue   = Color3.fromRGB(58,130,247),
 	objectOrange = Color3.fromRGB(255,165,0),
 }
--- ====================================================
+-- ============================================
 
--- helpers locais
+-- Helpers
 local function findBestPart(model)
 	if model:IsA("BasePart") then return model end
 	if not model:IsA("Model") then return nil end
@@ -55,26 +53,7 @@ local function createHighlight(adorneeInst, color)
 	return h
 end
 
-local function createBillboard(adorneePart, maxDistance)
-	local attach = Instance.new("Attachment")
-	attach.Name = "ESP_Attach"
-	attach.Position = Vector3.new(0, (adorneePart.Size.Y * 0.5) + 2, 0)
-	attach.Parent = adorneePart
-
-	local bill = Instance.new("BillboardGui")
-	bill.Name = "ESP_Billboard"
-	bill.Adornee = attach
-	bill.Size = UDim2.fromOffset(220, 48)
-	bill.AlwaysOnTop = true
-	bill.LightInfluence = 0
-	bill.MaxDistance = (maxDistance or DEFAULTS.MaxDistance) + 200
-	bill.Enabled = false -- nunca mostramos texto
-
-	bill.Parent = Workspace:FindFirstChildOfClass("Camera") or adorneePart
-	return bill, attach
-end
-
--- =====================================================
+-- =============================================
 
 function ESP.create(opts)
 	opts = opts or {}
@@ -83,16 +62,15 @@ function ESP.create(opts)
 	self.Enabled      = false
 	self.MaxDistance  = tonumber(opts.MaxDistance) or DEFAULTS.MaxDistance
 	self.UpdateHz     = tonumber(opts.UpdateHz) or DEFAULTS.UpdateHz
-	self.ShowBillboard= (opts.ShowBillboard == true) and true or false
+	self.ShowBillboard= opts.ShowBillboard or false
 
-	self._tracked     = {}   -- [Instance] = { highlight, bill, attach, bestPart, isPlayerChar, ownerPlayer, conns={} }
+	self._tracked     = {}
 	self._accum       = 0
-	self._conns       = {}   -- conexões gerais (players/workspace/update)
-	self._charConns   = {}   -- [Player] = { charAddedConn }
+	self._conns       = {}
+	self._charConns   = {}
 	return self
 end
 
--- limpeza de um alvo
 function ESP:_cleanupTrack(inst)
 	local t = self._tracked[inst]
 	if not t then return end
@@ -110,18 +88,23 @@ function ESP:_trackInstance(inst, ownerPlr, isPlayerChar)
 	local bestPart = findBestPart(inst)
 	if not bestPart then return end
 
-	local color = isPlayerChar and COLORS.playerBlue or COLORS.objectOrange
-	local highlight = createHighlight(inst, color)
-
-	local bill, attach = nil, nil
-	if self.ShowBillboard then
-		bill, attach = createBillboard(bestPart, self.MaxDistance)
+	-- regra de cor corrigida
+	local color
+	if isPlayerChar then
+		local hum = inst:FindFirstChildWhichIsA("Humanoid")
+		if hum then
+			color = COLORS.playerBlue
+		else
+			color = COLORS.objectOrange
+		end
+	else
+		color = COLORS.objectOrange
 	end
+
+	local highlight = createHighlight(inst, color)
 
 	local tr = {
 		highlight = highlight,
-		bill      = bill,
-		attach    = attach,
 		bestPart  = bestPart,
 		isPlayerChar = isPlayerChar,
 		ownerPlayer  = ownerPlr,
@@ -129,7 +112,6 @@ function ESP:_trackInstance(inst, ownerPlr, isPlayerChar)
 	}
 	self._tracked[inst] = tr
 
-	-- auto-cleanup
 	table.insert(tr.conns, inst.AncestryChanged:Connect(function(_, parent)
 		if not parent then self:_cleanupTrack(inst) end
 	end))
@@ -140,7 +122,6 @@ function ESP:_trackInstance(inst, ownerPlr, isPlayerChar)
 	end
 end
 
--- players
 function ESP:_trackCharacterForPlayer(plr, char)
 	if not char then return end
 	self:_trackInstance(char, plr, true)
@@ -157,7 +138,6 @@ function ESP:_onPlayerAdded(plr)
 	}
 end
 
--- objetos custom (Attribute "ESP"=true ou Tag "ESP")
 function ESP:_considerCustomTarget(inst)
 	local isTagged = false
 	if inst:GetAttribute("ESP") == true then isTagged = true end
@@ -167,7 +147,6 @@ function ESP:_considerCustomTarget(inst)
 	end
 end
 
--- update por alvo
 function ESP:_updateOne(inst, data)
 	local myChar = LocalPlayer.Character
 	local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
@@ -176,17 +155,26 @@ function ESP:_updateOne(inst, data)
 		local dist = (myRoot.Position - targetPart.Position).Magnitude
 		local within = dist <= self.MaxDistance
 		if data.highlight then data.highlight.Enabled = self.Enabled and within end
-		if data.bill then data.bill.Enabled = false end -- nunca usamos labels
 	end
-	-- reforça cores
+
+	-- reforça cores com a regra corrigida
 	if data.highlight then
-		local color = data.isPlayerChar and COLORS.playerBlue or COLORS.objectOrange
+		local color
+		if data.isPlayerChar then
+			local hum = inst:FindFirstChildWhichIsA("Humanoid")
+			if hum then
+				color = COLORS.playerBlue
+			else
+				color = COLORS.objectOrange
+			end
+		else
+			color = COLORS.objectOrange
+		end
 		data.highlight.FillColor = color
 		data.highlight.OutlineColor = color
 	end
 end
 
--- loop
 function ESP:_bindUpdate()
 	local conn = RunService.Heartbeat:Connect(function(dt)
 		self._accum += dt
@@ -203,12 +191,11 @@ function ESP:_bindUpdate()
 	table.insert(self._conns, conn)
 end
 
--- público
+-- API
 function ESP:Enable()
 	if self.Enabled then return end
 	self.Enabled = true
 
-	-- Players que já existem
 	for _, plr in ipairs(Players:GetPlayers()) do
 		self:_onPlayerAdded(plr)
 	end
@@ -222,7 +209,6 @@ function ESP:Enable()
 		end
 	end))
 
-	-- Varre workspace atual + listen
 	for _, d in ipairs(Workspace:GetDescendants()) do
 		self:_considerCustomTarget(d)
 	end
@@ -238,17 +224,14 @@ function ESP:Disable()
 	if not self.Enabled then return end
 	self.Enabled = false
 
-	-- desconecta listeners gerais
 	for _, c in ipairs(self._conns) do pcall(function() c:Disconnect() end) end
 	self._conns = {}
 
-	-- desconecta listeners de char
 	for plr, pack in pairs(self._charConns) do
 		for _,c in ipairs(pack) do pcall(function() c:Disconnect() end) end
 		self._charConns[plr] = nil
 	end
 
-	-- limpa adornos e tracked
 	for inst,_ in pairs(self._tracked) do
 		self:_cleanupTrack(inst)
 	end
@@ -256,32 +239,6 @@ end
 
 function ESP:Destroy()
 	self:Disable()
-end
-
--- util opcional (não ligado a tecla aqui)
-function ESP:InspectUnderMouse()
-	local mouse = LocalPlayer:GetMouse()
-	local target = mouse.Target
-	if not target then
-		print("[ESP Inspect] No target under cursor.")
-		return
-	end
-	local path, node = {}, target
-	while node do
-		table.insert(path, 1, string.format("%s(%s)", node.Name, node.ClassName))
-		node = node.Parent
-	end
-	print("[ESP Inspect] PATH: " .. table.concat(path, " > "))
-
-	local rootModel = target:FindFirstAncestorOfClass("Model")
-	if rootModel then
-		local hum = rootModel:FindFirstChildWhichIsA("Humanoid")
-		local _, size = rootModel:GetBoundingBox()
-		print(("[ESP Inspect] RootModel: %s | Humanoid: %s | BBox: (%.1f, %.1f, %.1f)")
-			:format(rootModel:GetFullName(), hum and "yes" or "no", size.X, size.Y, size.Z))
-	else
-		print(("[ESP Inspect] No ancestor Model. Target is %s (%s)"):format(target.Name, target.ClassName))
-	end
 end
 
 return ESP
