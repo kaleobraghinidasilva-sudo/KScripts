@@ -1,11 +1,14 @@
--- main.luau — KScripts completo (menu lateral, toast, drag) + integração FPS
+-- main.luau — KScripts completo (menu lateral, toast, drag) + Settings (Show FPS) + Five Nights: Hunted (ESP)
 
 local Players = game:GetService("Players")
 local UIS     = game:GetService("UserInputService")
 
--- RAW do módulo FPS
+-- RAWs dos módulos
 local FPS_URL = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/fps.luau"
-local FPS     = loadstring(game:HttpGet(FPS_URL))()
+local ESP_URL = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/ESP.luau"
+
+local FPS = loadstring(game:HttpGet(FPS_URL))()
+local ESPModule = loadstring(game:HttpGet(ESP_URL))()
 
 local TITLEBAR_H, SIDEBAR_W, PAD = 36, 200, 8
 local COLORS = {
@@ -22,7 +25,7 @@ local SECTIONS     = {"Universal","Five Nights: Hunted","Settings"}
 local function make(class, props, kids)
 	local o = Instance.new(class)
 	for k,v in pairs(props or {}) do o[k]=v end
-	for _,c in ipairs(kids or {}) do c.Parent=o end
+	for _,c in ipairs(kids or {}) do c.Parent = o end
 	return o
 end
 
@@ -142,7 +145,8 @@ for _, name in ipairs(SECTIONS) do
 end
 setActive(SECTIONS[1])
 
--- SETTINGS: toggle Show FPS
+-- ================= Settings: Show FPS =================
+local fpsEnabled, fpsWin = false, nil
 do
 	local settings = sectionFrames["Settings"]
 	make("TextLabel",{Text="Show FPS", Font=Enum.Font.GothamBold, TextSize=16, TextColor3=COLORS.TEXT, BackgroundTransparency=1, Size=UDim2.fromOffset(200,26), Position=UDim2.fromOffset(4,4), TextXAlignment=Enum.TextXAlignment.Left}).Parent = settings
@@ -152,7 +156,6 @@ do
 	local ball = make("Frame",{Size=UDim2.fromOffset(22,22), Position=UDim2.fromOffset(2,2), BackgroundColor3=Color3.fromRGB(200,200,200)},{ make("UICorner",{CornerRadius=UDim.new(0,11)}) })
 	ball.Parent = switch
 
-	local fpsEnabled, fpsWin = false, nil
 	local function setSwitch(on: boolean)
 		if on then
 			ball:TweenPosition(UDim2.fromOffset(30,2),"Out","Quad",0.15,true)
@@ -167,25 +170,60 @@ do
 		fpsEnabled = not fpsEnabled
 		setSwitch(fpsEnabled)
 		if fpsEnabled then
-			-- passa um ScreenGui válido; o módulo garante não remover o KScripts
 			fpsWin = FPS.create(rootGui)
 		else
-			if fpsWin and fpsWin.Destroy then
-				fpsWin:Destroy() -- destruirá SÓ a janela do FPS
-				fpsWin = nil
-			end
+			if fpsWin and fpsWin.Destroy then fpsWin:Destroy(); fpsWin=nil end
 		end
 	end)
 end
 
+-- ============ Five Nights: Hunted → ESP toggle ============
+local espEnabled, espCtl = false, nil
+do
+	local fnH = sectionFrames["Five Nights: Hunted"]
+	make("TextLabel",{Text="ESP", Font=Enum.Font.GothamBold, TextSize=16, TextColor3=COLORS.TEXT, BackgroundTransparency=1, Size=UDim2.fromOffset(200,26), Position=UDim2.fromOffset(4,4), TextXAlignment=Enum.TextXAlignment.Left}).Parent = fnH
+
+	local switch = make("TextButton",{Text="", BackgroundColor3=COLORS.BTN, AutoButtonColor=true, Size=UDim2.fromOffset(54,26), Position=UDim2.fromOffset(220,4)},{ make("UICorner",{CornerRadius=UDim.new(0,13)}) })
+	switch.Parent = fnH
+	local ball = make("Frame",{Size=UDim2.fromOffset(22,22), Position=UDim2.fromOffset(2,2), BackgroundColor3=Color3.fromRGB(200,200,200)},{ make("UICorner",{CornerRadius=UDim.new(0,11)}) })
+	ball.Parent = switch
+
+	local function setSwitch(on: boolean)
+		if on then
+			ball:TweenPosition(UDim2.fromOffset(30,2),"Out","Quad",0.15,true)
+			ball.BackgroundColor3 = COLORS.ACCENT
+		else
+			ball:TweenPosition(UDim2.fromOffset(2,2),"Out","Quad",0.15,true)
+			ball.BackgroundColor3 = Color3.fromRGB(200,200,200)
+		end
+	end
+
+	switch.MouseButton1Click:Connect(function()
+		espEnabled = not espEnabled
+		setSwitch(espEnabled)
+		if espEnabled then
+			if not espCtl then
+				espCtl = ESPModule.create({
+					MaxDistance = 3000,
+					UpdateHz = 10,
+					ShowBillboard = false,
+				})
+			end
+			espCtl:Enable()
+		else
+			if espCtl then espCtl:Disable() end
+		end
+	end)
+end
+
+-- Fechar + Toast + F1
 close.MouseButton1Click:Connect(function()
 	win.Visible=false
 	showToast("KScripts oculto. Pressione F1 para reabrir.",3.5)
 end)
-
 UIS.InputBegan:Connect(function(input,gp)
 	if gp then return end
 	if input.KeyCode==Enum.KeyCode.F1 then win.Visible = not win.Visible end
 end)
 
-print("KScripts: GUI carregada.")
+print("KScripts: GUI carregada (FPS + ESP integrados).")
