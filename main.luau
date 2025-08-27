@@ -1,12 +1,12 @@
 -- main.luau
--- KScripts GUI (layout original) + requireRemote (para Solara)
+-- KScripts GUI (layout original com scrollbars) + requireRemote (Solara)
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local UIS = game:GetService("UserInputService")
 
--- Função para requerer módulos direto do GitHub
+-- Função para carregar módulos direto do GitHub
 local function requireRemote(path)
     local url = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/" .. path
     local src = game:HttpGet(url)
@@ -53,6 +53,7 @@ closeBtn.Position = UDim2.new(1, -44, 0, 0)
 closeBtn.Text = "X"
 closeBtn.Parent = topBar
 
+-- Menu lateral (com barra de rolagem)
 local sideMenu = Instance.new("ScrollingFrame")
 sideMenu.Size = UDim2.new(0, 180, 1, -44)
 sideMenu.Position = UDim2.new(0,0,0,44)
@@ -61,6 +62,7 @@ sideMenu.ScrollBarThickness = 6
 sideMenu.BackgroundColor3 = Color3.fromRGB(35,35,35)
 sideMenu.Parent = mainFrame
 
+-- Conteúdo (com barra de rolagem)
 local contentFrame = Instance.new("ScrollingFrame")
 contentFrame.Size = UDim2.new(1, -180, 1, -44)
 contentFrame.Position = UDim2.new(0, 180, 0, 44)
@@ -82,6 +84,8 @@ for _, section in ipairs(sections) do
     btn.Size = UDim2.new(1, -10, 0, 40)
     btn.Position = UDim2.new(0, 5, 0, (#buttons)*45 + 5)
     btn.Text = section.Name
+    btn.BackgroundColor3 = Color3.fromRGB(50,50,50)
+    btn.TextColor3 = Color3.new(1,1,1)
     btn.Parent = sideMenu
     table.insert(buttons, btn)
 
@@ -225,6 +229,7 @@ for _, section in ipairs(sections) do
     end)
 end
 
+-- Botão fechar
 closeBtn.MouseButton1Click:Connect(function()
     screenGui.Enabled = false
 end)
