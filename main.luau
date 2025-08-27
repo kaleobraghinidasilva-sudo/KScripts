@@ -185,29 +185,72 @@ do
 		if espEnabled then if not espCtl then espCtl=ESPModule.create({MaxDistance=3000,UpdateHz=10}) end espCtl:Enable() else if espCtl then espCtl:Disable() end end
 	end)
 
-	-- Walkspeed
-	make("TextLabel",{Text="Walkspeed", Font=Enum.Font.GothamBold, TextSize=16, TextColor3=COLORS.TEXT, BackgroundTransparency=1, Size=UDim2.fromOffset(200,26), Position=UDim2.fromOffset(4,40)}).Parent = fnH
-	local wsKeyBtn = make("TextButton",{Text="Set Key", BackgroundColor3=COLORS.BTN, Size=UDim2.fromOffset(80,26), Position=UDim2.fromOffset(220,40)})
-	wsKeyBtn.Parent = fnH
-	local baseBox = make("TextBox",{Text="16", BackgroundColor3=COLORS.PANEL, Size=UDim2.fromOffset(50,26), Position=UDim2.fromOffset(310,40)})
-	baseBox.Parent = fnH
-	local boostBox = make("TextBox",{Text="32", BackgroundColor3=COLORS.PANEL, Size=UDim2.fromOffset(50,26), Position=UDim2.fromOffset(370,40)})
-	boostBox.Parent = fnH
-	local currentKey = nil
-	wsKeyBtn.MouseButton1Click:Connect(function()
-		wsKeyBtn.Text="Press..."
-		local conn; conn=UIS.InputBegan:Connect(function(input,gp)
-			if not gp and input.KeyCode~=Enum.KeyCode.Unknown then
-				currentKey=input.KeyCode
-				walkCtl:SetKey(currentKey)
-				wsKeyBtn.Text="Key: "..input.KeyCode.Name
-				conn:Disconnect()
-			end
-		end)
-	end)
-	baseBox.FocusLost:Connect(function() walkCtl:SetSpeeds(tonumber(baseBox.Text) or 16, tonumber(boostBox.Text) or 32) end)
-	boostBox.FocusLost:Connect(function() walkCtl:SetSpeeds(tonumber(baseBox.Text) or 16, tonumber(boostBox.Text) or 32) end)
+-- Walkspeed
+make("TextLabel",{
+    Text="Walkspeed", Font=Enum.Font.GothamBold, TextSize=16,
+    TextColor3=COLORS.TEXT, BackgroundTransparency=1,
+    Size=UDim2.fromOffset(200,26), Position=UDim2.fromOffset(4,40),
+    TextXAlignment=Enum.TextXAlignment.Left
+}).Parent = fnH
+
+local wsKeyBtn = make("TextButton",{
+    Text="Set Key", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT,
+    BackgroundColor3=COLORS.BTN, Size=UDim2.fromOffset(100,26), Position=UDim2.fromOffset(220,40)
+})
+wsKeyBtn.Parent = fnH
+
+local clearBtn = make("TextButton",{
+    Text="Clear Key", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT,
+    BackgroundColor3=COLORS.BTN, Size=UDim2.fromOffset(100,26), Position=UDim2.fromOffset(330,40)
+})
+clearBtn.Parent = fnH
+
+local baseBox = make("TextBox",{
+    Text="16", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT,
+    BackgroundColor3=COLORS.PANEL, Size=UDim2.fromOffset(60,26), Position=UDim2.fromOffset(220,75)
+})
+baseBox.Parent = fnH
+
+local boostBox = make("TextBox",{
+    Text="32", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT,
+    BackgroundColor3=COLORS.PANEL, Size=UDim2.fromOffset(60,26), Position=UDim2.fromOffset(290,75)
+})
+boostBox.Parent = fnH
+
+make("TextLabel",{
+    Text="Base", Font=Enum.Font.Gotham, TextSize=12, TextColor3=COLORS.MUTED,
+    BackgroundTransparency=1, Size=UDim2.fromOffset(40,20), Position=UDim2.fromOffset(220,100)
+}).Parent = fnH
+
+make("TextLabel",{
+    Text="Boost", Font=Enum.Font.Gotham, TextSize=12, TextColor3=COLORS.MUTED,
+    BackgroundTransparency=1, Size=UDim2.fromOffset(40,20), Position=UDim2.fromOffset(290,100)
+}).Parent = fnH
+
+local currentKey = nil
+wsKeyBtn.MouseButton1Click:Connect(function()
+    wsKeyBtn.Text="Press..."
+    local conn; conn=UIS.InputBegan:Connect(function(input,gp)
+        if not gp and input.KeyCode~=Enum.KeyCode.Unknown then
+            currentKey=input.KeyCode
+            walkCtl:SetKey(currentKey)
+            wsKeyBtn.Text="Key: "..input.KeyCode.Name
+            conn:Disconnect()
+        end
+    end)
+end)
+
+clearBtn.MouseButton1Click:Connect(function()
+    currentKey=nil
+    walkCtl:SetKey(nil)
+    wsKeyBtn.Text="Set Key"
+end)
+
+local function updateSpeeds()
+    walkCtl:SetSpeeds(tonumber(baseBox.Text) or 16, tonumber(boostBox.Text) or 32)
 end
+baseBox.FocusLost:Connect(updateSpeeds)
+boostBox.FocusLost:Connect(updateSpeeds)
 
 -- Fechar
 close.MouseButton1Click:Connect(function()
