@@ -1,5 +1,5 @@
 -- Modules/Five Nights - Hunted/esp.luau
--- ESP (Highlight-only): Players = Blue, NPCs/Objetos = Orange
+-- ESP: Players = Blue | NPCs/Objetos = Orange
 -- Controle de enable/disable é feito pela main.luau
 
 local Players = game:GetService("Players")
@@ -47,7 +47,7 @@ local function createHighlight(adorneeInst, color)
 	h.OutlineColor = color
 	h.OutlineTransparency = 0
 	h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-	h.Adornee = ad
+	h.Adornee = adorneeInst
 	h.Enabled = true
 	h.Parent = Workspace:FindFirstChildOfClass("Camera") or adorneeInst
 	return h
@@ -71,13 +71,24 @@ function ESP.create(opts)
 	return self
 end
 
--- identifica se o Model realmente pertence a um Player
+-- identifica se o Model realmente é de um Player (Character normal ou morph)
 function ESP:_isPlayerCharacter(model: Model)
+	if not model then return false end
+	local hum = model:FindFirstChildWhichIsA("Humanoid")
+	if not hum then return false end
+
+	-- checa Character oficial
 	for _, plr in ipairs(Players:GetPlayers()) do
 		if plr.Character == model then
 			return true
 		end
 	end
+
+	-- fallback: alguns jogos clonam morphs com o nome do Player
+	if Players:FindFirstChild(model.Name) then
+		return true
+	end
+
 	return false
 end
 
@@ -87,8 +98,6 @@ function ESP:_cleanupTrack(inst)
 	if t.conns then
 		for _, c in ipairs(t.conns) do pcall(function() c:Disconnect() end) end
 	end
-	if t.bill then pcall(function() t.bill:Destroy() end) end
-	if t.attach then pcall(function() t.attach:Destroy() end) end
 	if t.highlight then pcall(function() t.highlight:Destroy() end) end
 	self._tracked[inst] = nil
 end
@@ -101,11 +110,10 @@ function ESP:_trackInstance(inst, ownerPlr, isPlayerChar)
 	-- regra de cor corrigida
 	local color
 	if isPlayerChar then
-		local hum = inst:FindFirstChildWhichIsA("Humanoid")
-		if hum and self:_isPlayerCharacter(inst) then
-			color = COLORS.playerBlue -- player real
+		if self:_isPlayerCharacter(inst) then
+			color = COLORS.playerBlue -- player real (normal ou morph)
 		else
-			color = COLORS.objectOrange -- NPC/objeto
+			color = COLORS.objectOrange -- NPC
 		end
 	else
 		color = COLORS.objectOrange
@@ -171,8 +179,7 @@ function ESP:_updateOne(inst, data)
 	if data.highlight then
 		local color
 		if data.isPlayerChar then
-			local hum = inst:FindFirstChildWhichIsA("Humanoid")
-			if hum and self:_isPlayerCharacter(inst) then
+			if self:_isPlayerCharacter(inst) then
 				color = COLORS.playerBlue
 			else
 				color = COLORS.objectOrange
