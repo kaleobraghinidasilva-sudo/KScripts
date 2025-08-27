@@ -1,4 +1,5 @@
--- main.luau — KScripts completo (menu lateral, toast, drag) + Settings (Show FPS) + Five Nights: Hunted (ESP + Walkspeed)
+-- main.luau — KScripts completo (menu lateral, toast, drag)
+-- Sections: Settings (Show FPS), Five Nights: Hunted (ESP + Walkspeed)
 
 local Players = game:GetService("Players")
 local UIS     = game:GetService("UserInputService")
@@ -6,14 +7,14 @@ local UIS     = game:GetService("UserInputService")
 -- RAWs dos módulos
 local FPS_URL       = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Settings/fps.luau"
 local ESP_URL       = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/esp.luau"
-local WALKSPEED_URL = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Universal/walkspeed.luau"
+local WALKSPEED_URL = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/walkspeed.luau"
 
 local FPS            = loadstring(game:HttpGet(FPS_URL))()
 local ESPModule      = loadstring(game:HttpGet(ESP_URL))()
 local WalkspeedModule= loadstring(game:HttpGet(WALKSPEED_URL))()
 
 -- ========================================
-local TITLEBAR_H, SIDEBAR_W, PAD = 36, 200, 8
+local TITLEBAR_H, PAD = 36, 200, 8
 local COLORS = {
 	BG     = Color3.fromRGB(24,24,24),
 	PANEL  = Color3.fromRGB(35,35,35),
@@ -137,7 +138,7 @@ local function setActive(name: string)
 end
 
 for _, name in ipairs(SECTIONS) do
-	local tab = make("TextButton",{BackgroundColor3=COLORS.BTN, Text=name, Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.MUTED, Size=UDim2.new(1,-20,0,36)},{ make("UICorner",{CornerRadius=UDim.new(0,8)}) })
+	local tab = make("TextButton",{BackgroundColor3=COLORS.BTN, Text=name, Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT, Size=UDim2.new(1,-20,0,36)},{ make("UICorner",{CornerRadius=UDim.new(0,8)}) })
 	tab.Parent = sidebar
 	sidebarButtons[name] = tab
 
@@ -153,7 +154,7 @@ setActive(SECTIONS[1])
 local fpsEnabled, fpsWin = false, nil
 do
 	local settings = sectionFrames["Settings"]
-	make("TextLabel",{Text="Show FPS", Font=Enum.Font.GothamBold, TextSize=16, TextColor3=COLORS.TEXT, BackgroundTransparency=1, Size=UDim2.fromOffset(200,26), Position=UDim2.fromOffset(4,4), TextXAlignment=Enum.TextXAlignment.Left}).Parent = settings
+	make("TextLabel",{Text="Show FPS", Font=Enum.Font.GothamBold, TextSize=16, TextColor3=COLORS.TEXT, BackgroundTransparency=1, Size=UDim2.fromOffset(200,26), Position=UDim2.fromOffset(4,4)}).Parent = settings
 	local switch = make("TextButton",{BackgroundColor3=COLORS.BTN, Size=UDim2.fromOffset(54,26), Position=UDim2.fromOffset(220,4)},{ make("UICorner",{CornerRadius=UDim.new(0,13)}) })
 	switch.Parent = settings
 	local ball = make("Frame",{Size=UDim2.fromOffset(22,22), Position=UDim2.fromOffset(2,2), BackgroundColor3=Color3.fromRGB(200,200,200)},{ make("UICorner",{CornerRadius=UDim.new(0,11)}) })
@@ -186,14 +187,21 @@ do
 	end)
 
 	-- Walkspeed
-	make("TextLabel",{Text="Walkspeed", Font=Enum.Font.GothamBold, TextSize=16, TextColor3=COLORS.TEXT, BackgroundTransparency=1, Size=UDim2.fromOffset(200,26), Position=UDim2.fromOffset(4,40)}).Parent = fnH
-	local wsKeyBtn = make("TextButton",{Text="Set Key", BackgroundColor3=COLORS.BTN, Size=UDim2.fromOffset(80,26), Position=UDim2.fromOffset(220,40)})
+	make("TextLabel",{Text="Walkspeed", Font=Enum.Font.GothamBold, TextSize=16, TextColor3=COLORS.TEXT, BackgroundTransparency=1, Size=UDim2.fromOffset(200,26), Position=UDim2.fromOffset(4,40), TextXAlignment=Enum.TextXAlignment.Left}).Parent = fnH
+
+	local wsKeyBtn = make("TextButton",{Text="Set Key", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT, BackgroundColor3=COLORS.BTN, Size=UDim2.fromOffset(100,26), Position=UDim2.fromOffset(220,40)})
 	wsKeyBtn.Parent = fnH
-	local baseBox = make("TextBox",{Text="16", BackgroundColor3=COLORS.PANEL, Size=UDim2.fromOffset(50,26), Position=UDim2.fromOffset(310,40)})
+	local clearBtn = make("TextButton",{Text="Clear Key", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT, BackgroundColor3=COLORS.BTN, Size=UDim2.fromOffset(100,26), Position=UDim2.fromOffset(330,40)})
+	clearBtn.Parent = fnH
+
+	local baseBox = make("TextBox",{Text="16", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT, BackgroundColor3=COLORS.PANEL, Size=UDim2.fromOffset(60,26), Position=UDim2.fromOffset(220,75)})
 	baseBox.Parent = fnH
-	local boostBox = make("TextBox",{Text="32", BackgroundColor3=COLORS.PANEL, Size=UDim2.fromOffset(50,26), Position=UDim2.fromOffset(370,40)})
+	local boostBox = make("TextBox",{Text="32", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT, BackgroundColor3=COLORS.PANEL, Size=UDim2.fromOffset(60,26), Position=UDim2.fromOffset(290,75)})
 	boostBox.Parent = fnH
-	local currentKey = nil
+	make("TextLabel",{Text="Base", Font=Enum.Font.Gotham, TextSize=12, TextColor3=COLORS.MUTED, BackgroundTransparency=1, Size=UDim2.fromOffset(40,20), Position=UDim2.fromOffset(220,100)}).Parent = fnH
+	make("TextLabel",{Text="Boost", Font=Enum.Font.Gotham, TextSize=12, TextColor3=COLORS.MUTED, BackgroundTransparency=1, Size=UDim2.fromOffset(40,20), Position=UDim2.fromOffset(290,100)}).Parent = fnH
+
+	local currentKey=nil
 	wsKeyBtn.MouseButton1Click:Connect(function()
 		wsKeyBtn.Text="Press..."
 		local conn; conn=UIS.InputBegan:Connect(function(input,gp)
@@ -205,8 +213,9 @@ do
 			end
 		end)
 	end)
-	baseBox.FocusLost:Connect(function() walkCtl:SetSpeeds(tonumber(baseBox.Text) or 16, tonumber(boostBox.Text) or 32) end)
-	boostBox.FocusLost:Connect(function() walkCtl:SetSpeeds(tonumber(baseBox.Text) or 16, tonumber(boostBox.Text) or 32) end)
+	clearBtn.MouseButton1Click:Connect(function() currentKey=nil walkCtl:SetKey(nil) wsKeyBtn.Text="Set Key" end)
+	local function updateSpeeds() walkCtl:SetSpeeds(tonumber(baseBox.Text) or 16, tonumber(boostBox.Text) or 32) end
+	baseBox.FocusLost:Connect(updateSpeeds) boostBox.FocusLost:Connect(updateSpeeds)
 end
 
 -- Fechar
