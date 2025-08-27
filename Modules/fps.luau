@@ -1,13 +1,13 @@
--- Modules/fps.luau — FPS GUI (arrastável + redimensionável proporcional + FPS atual/min/max)
+-- Modules/fps.luau — FPS GUI (arrastável + redimensionável + atual/min/máx) [corrigido]
 
 local UIS        = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local Players    = game:GetService("Players")
 
 local M = {}
 M.__index = M
 
--- Estilo/base
-local BASE_SIZE = Vector2.new(180, 84)     -- tamanho base antes da escala
+local BASE_SIZE = Vector2.new(180, 84)
 local HEADER_H  = 20
 local MIN_SCALE, MAX_SCALE = 0.6, 3.0
 local RESIZE_MARGIN = 10
@@ -23,15 +23,14 @@ local function make(class, props, kids)
 	return o
 end
 
--- Drag sem salto
 local function attachDrag(frame: Frame, handle: GuiObject)
 	handle.Active = true
-	local dragging = false
-	local dragInput, dragStart, startPos
+	local dragging, dragInput = false, nil
+	local dragStart, startPos = Vector2.zero, UDim2.fromOffset(0,0)
 
 	local function update(input: InputObject)
-		local delta = input.Position - dragStart
-		frame.Position = UDim2.fromOffset(startPos.X.Offset + delta.X, startPos.Y.Offset + delta.Y)
+		local d = input.Position - dragStart
+		frame.Position = UDim2.fromOffset(startPos.X.Offset + d.X, startPos.Y.Offset + d.Y)
 	end
 
 	handle.InputBegan:Connect(function(input)
@@ -47,14 +46,31 @@ local function attachDrag(frame: Frame, handle: GuiObject)
 	handle.InputChanged:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
 	end)
-	UIS.InputChanged:Connect(function(input)
-		if input == dragInput and dragging then update(input) end
-	end)
+	UIS.InputChanged:Connect(function(input) if input==dragInput and dragging then update(input) end end)
 end
 
--- API
-function M.create(parent: Instance, opts: table?)
+function M.create(parent: Instance?, opts: table?)
 	opts = opts or {}
+
+	-- ✅ garante um ScreenGui válido
+	local container: ScreenGui
+	if typeof(parent)=="Instance" and parent:IsA("ScreenGui") then
+		container = parent
+	else
+		container = Instance.new("ScreenGui")
+		container.Name = "KScriptsFPS"
+		container.ResetOnSpawn = false
+		container.IgnoreGuiInset = true
+		container.DisplayOrder = 60
+		if typeof(parent)=="Instance" and parent:IsA("PlayerGui") then
+			container.Parent = parent
+		elseif typeof(parent)=="Instance" and parent.Parent and parent.Parent:IsA("PlayerGui") then
+			container.Parent = parent.Parent
+		else
+			container.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+		end
+	end
+
 	local startPos   = opts.position or UDim2.fromOffset(520, 240)
 	local startScale = tonumber(opts.scale) or 1
 
@@ -62,7 +78,7 @@ function M.create(parent: Instance, opts: table?)
 		Size=UDim2.fromOffset(BASE_SIZE.X, BASE_SIZE.Y),
 		Position=startPos, BackgroundColor3=C_PANEL, BorderSizePixel=0, Active=true
 	})
-	win.Parent = parent
+	win.Parent = container
 
 	local uiScale = Instance.new("UIScale")
 	uiScale.Scale = startScale
@@ -70,28 +86,17 @@ function M.create(parent: Instance, opts: table?)
 
 	local header = make("Frame",{Size=UDim2.new(1,0,0,HEADER_H), BackgroundColor3=Color3.fromRGB(50,50,50), Active=true})
 	header.Parent = win
-	make("TextLabel",{
-		Text="FPS", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=C_TEXT,
-		BackgroundTransparency=1, Size=UDim2.fromScale(1,1)
-	}).Parent = header
+	make("TextLabel",{Text="FPS", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=C_TEXT, BackgroundTransparency=1, Size=UDim2.fromScale(1,1)}).Parent = header
 
-	local lblNow = make("TextLabel",{
-		BackgroundTransparency=1, Text="FPS: 0", Font=Enum.Font.GothamBold,
-		TextSize=16, TextColor3=C_TEXT, TextXAlignment=Enum.TextXAlignment.Left,
-		Size=UDim2.new(1,-10,0,26), Position=UDim2.fromOffset(6,HEADER_H+2)
-	})
+	local lblNow = make("TextLabel",{BackgroundTransparency=1, Text="FPS: 0", Font=Enum.Font.GothamBold, TextSize=16, TextColor3=C_TEXT, TextXAlignment=Enum.TextXAlignment.Left, Size=UDim2.new(1,-10,0,26), Position=UDim2.fromOffset(6,HEADER_H+2)})
 	lblNow.Parent = win
 
-	local lblMinMax = make("TextLabel",{
-		BackgroundTransparency=1, Text="Min: 0 | Max: 0", Font=Enum.Font.Gotham,
-		TextSize=14, TextColor3=C_MUTED, TextXAlignment=Enum.TextXAlignment.Left,
-		Size=UDim2.new(1,-10,0,22), Position=UDim2.fromOffset(6,HEADER_H+28)
-	})
+	local lblMinMax = make("TextLabel",{BackgroundTransparency=1, Text="Min: 0 | Max: 0", Font=Enum.Font.Gotham, TextSize=14, TextColor3=C_MUTED, TextXAlignment=Enum.TextXAlignment.Left, Size=UDim2.new(1,-10,0,22), Position=UDim2.fromOffset(6,HEADER_H+28)})
 	lblMinMax.Parent = win
 
 	attachDrag(win, header)
 
-	-- Redimensionar proporcional (canto inferior-direito)
+	-- Redimensionamento proporcional
 	local resizing = false
 	local startMouse = Vector2.zero
 	local startAbs   = Vector2.zero
@@ -120,11 +125,12 @@ function M.create(parent: Instance, opts: table?)
 			local desiredH = startAbs.Y + dy
 			local scaleW   = desiredW / BASE_SIZE.X
 			local scaleH   = desiredH / BASE_SIZE.Y
-			uiScale.Scale  = math.clamp(math.max(scaleW, scaleH), MIN_SCALE, MAX_SCALE)
+			local newScale = math.clamp(math.max(scaleW, scaleH), MIN_SCALE, MAX_SCALE)
+			uiScale.Scale  = newScale
 		end
 	end)
 
-	-- FPS loop
+	-- FPS
 	local minF, maxF = math.huge, 0
 	local conn = RunService.RenderStepped:Connect(function(dt)
 		local fps = math.max(0, math.floor(1/dt + 0.5))
@@ -134,20 +140,20 @@ function M.create(parent: Instance, opts: table?)
 		lblMinMax.Text = ("Min: %d | Max: %d"):format(minF == math.huge and 0 or minF, maxF)
 	end)
 
-	-- objeto retornado
 	local self = setmetatable({
-		window = win,
-		uiScale = uiScale,
-		_conn = conn,
+		container = container,
+		window    = win,
+		uiScale   = uiScale,
+		_conn     = conn,
 	}, M)
 
 	function self:Destroy()
 		if self._conn then pcall(function() self._conn:Disconnect() end) end
-		if self.window then self.window:Destroy() end
+		if self.container then self.container:Destroy() end
 	end
-	function self:Show()  self.window.Visible = true  end
-	function self:Hide()  self.window.Visible = false end
-	function self:Toggle() self.window.Visible = not self.window.Visible end
+	function self:Show()  if self.container then self.container.Enabled = true end end
+	function self:Hide()  if self.container then self.container.Enabled = false end end
+	function self:Toggle() if self.container then self.container.Enabled = not self.container.Enabled end end
 
 	return self
 end
