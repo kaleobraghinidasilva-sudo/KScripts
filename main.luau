@@ -1,19 +1,19 @@
 -- main.luau
--- KScripts GUI central (versão para Solara + GitHub remoto)
+-- KScripts GUI (layout original) + requireRemote (para Solara)
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local UIS = game:GetService("UserInputService")
 
--- função para puxar módulos direto do GitHub
+-- Função para requerer módulos direto do GitHub
 local function requireRemote(path)
     local url = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/" .. path
     local src = game:HttpGet(url)
     return loadstring(src)()
 end
 
--- carrega módulos
+-- Carregar módulos
 local FPSModule = requireRemote("Modules/Settings/fps.luau")
 local WalkspeedModule = requireRemote("Modules/Universal/walkspeed.luau")
 local ESPModule = requireRemote("Modules/Five Nights - Hunted/esp.luau")
@@ -25,22 +25,21 @@ screenGui.ResetOnSpawn = false
 screenGui.Parent = PlayerGui
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.fromOffset(600, 400)
-mainFrame.Position = UDim2.fromScale(0.5, 0.5)
-mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+mainFrame.Size = UDim2.fromOffset(760, 460)
+mainFrame.Position = UDim2.fromScale(0.18, 0.22)
 mainFrame.BackgroundColor3 = Color3.fromRGB(40,40,40)
 mainFrame.Active = true
 mainFrame.Draggable = true
 mainFrame.Parent = screenGui
 
 local topBar = Instance.new("Frame")
-topBar.Size = UDim2.new(1, 0, 0, 30)
+topBar.Size = UDim2.new(1, 0, 0, 44)
 topBar.BackgroundColor3 = Color3.fromRGB(25,25,25)
 topBar.Parent = mainFrame
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -30, 1, 0)
-title.Position = UDim2.new(0, 5, 0, 0)
+title.Size = UDim2.new(1, -44, 1, 0)
+title.Position = UDim2.new(0, 10, 0, 0)
 title.Text = "KScripts"
 title.TextColor3 = Color3.new(1,1,1)
 title.BackgroundTransparency = 1
@@ -49,20 +48,24 @@ title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = topBar
 
 local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.fromOffset(30,30)
-closeBtn.Position = UDim2.new(1, -30, 0, 0)
+closeBtn.Size = UDim2.fromOffset(44,44)
+closeBtn.Position = UDim2.new(1, -44, 0, 0)
 closeBtn.Text = "X"
 closeBtn.Parent = topBar
 
-local sideMenu = Instance.new("Frame")
-sideMenu.Size = UDim2.new(0, 150, 1, -30)
-sideMenu.Position = UDim2.new(0,0,0,30)
+local sideMenu = Instance.new("ScrollingFrame")
+sideMenu.Size = UDim2.new(0, 180, 1, -44)
+sideMenu.Position = UDim2.new(0,0,0,44)
+sideMenu.CanvasSize = UDim2.new(0,0,0,0)
+sideMenu.ScrollBarThickness = 6
 sideMenu.BackgroundColor3 = Color3.fromRGB(35,35,35)
 sideMenu.Parent = mainFrame
 
-local contentFrame = Instance.new("Frame")
-contentFrame.Size = UDim2.new(1, -150, 1, -30)
-contentFrame.Position = UDim2.new(0, 150, 0, 30)
+local contentFrame = Instance.new("ScrollingFrame")
+contentFrame.Size = UDim2.new(1, -180, 1, -44)
+contentFrame.Position = UDim2.new(0, 180, 0, 44)
+contentFrame.CanvasSize = UDim2.new(0,0,0,0)
+contentFrame.ScrollBarThickness = 6
 contentFrame.BackgroundTransparency = 1
 contentFrame.Parent = mainFrame
 
@@ -84,10 +87,12 @@ for _, section in ipairs(sections) do
 
     btn.MouseButton1Click:Connect(function()
         for _, child in ipairs(contentFrame:GetChildren()) do
-            child:Destroy()
+            if child:IsA("GuiObject") then
+                child:Destroy()
+            end
         end
 
-        -- UNIVERSAL
+        -- UNIVERSAL → Walkspeed
         if section.Name == "Universal" then
             local wsFrame = Instance.new("Frame")
             wsFrame.Size = UDim2.new(1, -10, 0, 100)
@@ -148,7 +153,7 @@ for _, section in ipairs(sections) do
             boostBox.FocusLost:Connect(updateSpeeds)
         end
 
-        -- FIVE NIGHTS
+        -- FIVE NIGHTS → ESP
         if section.Name == "Five Nights: Hunted" then
             local espFrame = Instance.new("Frame")
             espFrame.Size = UDim2.new(1, -10, 0, 60)
@@ -183,7 +188,7 @@ for _, section in ipairs(sections) do
             end)
         end
 
-        -- SETTINGS
+        -- SETTINGS → FPS
         if section.Name == "Settings" then
             local fpsFrame = Instance.new("Frame")
             fpsFrame.Size = UDim2.new(1, -10, 0, 60)
