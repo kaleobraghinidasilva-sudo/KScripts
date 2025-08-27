@@ -1,16 +1,22 @@
 -- main.luau
--- KScripts GUI central
+-- KScripts GUI central (versão para Solara + GitHub remoto)
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local UIS = game:GetService("UserInputService")
 
-local modulesFolder = script:WaitForChild("Modules")
+-- função para puxar módulos direto do GitHub
+local function requireRemote(path)
+    local url = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/" .. path
+    local src = game:HttpGet(url)
+    return loadstring(src)()
+end
 
--- Requer módulos
-local FPSModule = require(modulesFolder.Settings.fps)
-local WalkspeedModule = require(modulesFolder.Universal.walkspeed)
-local ESPModule = require(modulesFolder["Five Nights - Hunted"].esp)
+-- carrega módulos
+local FPSModule = requireRemote("Modules/Settings/fps.luau")
+local WalkspeedModule = requireRemote("Modules/Universal/walkspeed.luau")
+local ESPModule = requireRemote("Modules/Five Nights - Hunted/esp.luau")
 
 -- GUI principal
 local screenGui = Instance.new("ScreenGui")
@@ -124,7 +130,7 @@ for _, section in ipairs(sections) do
             keyButton.MouseButton1Click:Connect(function()
                 keyButton.Text = "Press key..."
                 local conn
-                conn = game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
+                conn = UIS.InputBegan:Connect(function(input, gp)
                     if not gp and input.KeyCode ~= Enum.KeyCode.Unknown then
                         Walkspeed:SetKey(input.KeyCode)
                         keyButton.Text = "Key: " .. input.KeyCode.Name
