@@ -1,6 +1,8 @@
 -- Modules/Five Nights - Hunted/esp.luau
--- ESP: Players = Blue | NPCs/Objetos = Orange
--- Controle de enable/disable é feito pela main.luau
+-- ESP: 
+-- Player em avatar normal = Azul
+-- Player em morph/animatronic = Laranja
+-- NPCs/Objetos = Laranja
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -12,7 +14,6 @@ local LocalPlayer = Players.LocalPlayer
 local ESP = {}
 ESP.__index = ESP
 
--- ================== CONFIG ==================
 local DEFAULTS = {
 	Enabled = false,
 	MaxDistance = 3000,
@@ -23,7 +24,6 @@ local COLORS = {
 	playerBlue   = Color3.fromRGB(58,130,247),
 	objectOrange = Color3.fromRGB(255,165,0),
 }
--- ============================================
 
 -- Helpers
 local function findBestPart(model)
@@ -71,24 +71,14 @@ function ESP.create(opts)
 	return self
 end
 
--- identifica se o Model realmente é de um Player (Character normal ou morph)
-function ESP:_isPlayerCharacter(model: Model)
-	if not model then return false end
-	local hum = model:FindFirstChildWhichIsA("Humanoid")
-	if not hum then return false end
-
-	-- checa Character oficial
-	for _, plr in ipairs(Players:GetPlayers()) do
-		if plr.Character == model then
-			return true
-		end
-	end
-
-	-- fallback: alguns jogos clonam morphs com o nome do Player
-	if Players:FindFirstChild(model.Name) then
+-- Detecta se o Player está em avatar normal ou em morph
+function ESP:_isNormalAvatar(model: Model, plr: Player)
+	if plr.Character ~= model then return false end
+	local head = model:FindFirstChild("Head")
+	local hrp = model:FindFirstChild("HumanoidRootPart")
+	if head and hrp then
 		return true
 	end
-
 	return false
 end
 
@@ -107,16 +97,14 @@ function ESP:_trackInstance(inst, ownerPlr, isPlayerChar)
 	local bestPart = findBestPart(inst)
 	if not bestPart then return end
 
-	-- regra de cor corrigida
-	local color
-	if isPlayerChar then
-		if self:_isPlayerCharacter(inst) then
-			color = COLORS.playerBlue -- player real (normal ou morph)
+	local color = COLORS.objectOrange -- padrão laranja
+
+	if isPlayerChar and ownerPlr then
+		if self:_isNormalAvatar(inst, ownerPlr) then
+			color = COLORS.playerBlue -- avatar normal
 		else
-			color = COLORS.objectOrange -- NPC
+			color = COLORS.objectOrange -- morph/animatronic
 		end
-	else
-		color = COLORS.objectOrange
 	end
 
 	local highlight = createHighlight(inst, color)
@@ -157,10 +145,7 @@ function ESP:_onPlayerAdded(plr)
 end
 
 function ESP:_considerCustomTarget(inst)
-	local isTagged = false
-	if inst:GetAttribute("ESP") == true then isTagged = true end
-	if not isTagged and CollectionService:HasTag(inst, "ESP") then isTagged = true end
-	if isTagged then
+	if inst:GetAttribute("ESP") == true or CollectionService:HasTag(inst, "ESP") then
 		self:_trackInstance(inst, nil, false)
 	end
 end
@@ -175,17 +160,14 @@ function ESP:_updateOne(inst, data)
 		if data.highlight then data.highlight.Enabled = self.Enabled and within end
 	end
 
-	-- reforça cores
 	if data.highlight then
-		local color
-		if data.isPlayerChar then
-			if self:_isPlayerCharacter(inst) then
+		local color = COLORS.objectOrange
+		if data.isPlayerChar and data.ownerPlayer then
+			if self:_isNormalAvatar(inst, data.ownerPlayer) then
 				color = COLORS.playerBlue
 			else
 				color = COLORS.objectOrange
 			end
-		else
-			color = COLORS.objectOrange
 		end
 		data.highlight.FillColor = color
 		data.highlight.OutlineColor = color
