@@ -11,9 +11,9 @@ Walkspeed.__index = Walkspeed
 function Walkspeed.new()
     local self = setmetatable({}, Walkspeed)
     self.Enabled = false
-    self.ToggleKey = Enum.KeyCode.LeftShift -- padrão (pode ser configurado no GUI)
-    self.BaseSpeed = 16                     -- velocidade normal padrão
-    self.BoostSpeed = 32                    -- velocidade aumentada padrão
+    self.ToggleKey = Enum.KeyCode.LeftShift -- tecla padrão
+    self.BaseSpeed = 16
+    self.BoostSpeed = 32
     self._conn = nil
     return self
 end
@@ -33,7 +33,6 @@ end
 function Walkspeed:SetSpeeds(base, boost)
     self.BaseSpeed = base
     self.BoostSpeed = boost
-    -- sempre resetar pro base quando atualizar
     self:Apply(self.BaseSpeed)
 end
 
@@ -50,7 +49,6 @@ function Walkspeed:Enable()
             end
         end
     end)
-    -- aplica base no início
     self:Apply(self.BaseSpeed)
 end
 

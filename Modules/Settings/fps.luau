@@ -1,192 +1,76 @@
--- Modules/fps.luau — FPS GUI (arrastável + redimensionável + atual/min/máx)
--- Corrigido: ao destruir, NÃO remove o ScreenGui do KScripts.
+-- Modules/Settings/fps.luau
+-- Mostra FPS atual, mínimo e máximo
 
-local UIS        = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local Players    = game:GetService("Players")
+local Players = game:GetService("Players")
 
-local M = {}
-M.__index = M
+local FPS = {}
+FPS.__index = FPS
 
-local BASE_SIZE = Vector2.new(180, 84)
-local HEADER_H  = 20
-local MIN_SCALE, MAX_SCALE = 0.6, 3.0
-local RESIZE_MARGIN = 10
-
-local C_PANEL = Color3.fromRGB(35,35,35)
-local C_TEXT  = Color3.fromRGB(235,235,235)
-local C_MUTED = Color3.fromRGB(160,160,160)
-
-local function make(class, props, kids)
-	local o = Instance.new(class)
-	for k,v in pairs(props or {}) do o[k]=v end
-	for _,c in ipairs(kids or {}) do c.Parent=o end
-	return o
+function FPS.new()
+    local self = setmetatable({}, FPS)
+    self.Enabled = false
+    self.FrameCount = 0
+    self.LastTime = os.clock()
+    self.CurrentFPS = 0
+    self.MinFPS = math.huge
+    self.MaxFPS = 0
+    self.Gui = nil
+    return self
 end
 
-local function attachDrag(frame: Frame, handle: GuiObject)
-	handle.Active = true
-	local dragging, dragInput = false, nil
-	local dragStart, startPos = Vector2.zero, UDim2.fromOffset(0,0)
+function FPS:_createGui()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "FPSGui"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 
-	local function update(input: InputObject)
-		local d = input.Position - dragStart
-		frame.Position = UDim2.fromOffset(startPos.X.Offset + d.X, startPos.Y.Offset + d.Y)
-	end
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.fromOffset(140, 60)
+    frame.Position = UDim2.fromOffset(100, 100)
+    frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+    frame.Active = true
+    frame.Draggable = true
+    frame.Parent = screenGui
 
-	handle.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			dragging  = true
-			dragStart = input.Position
-			startPos  = frame.Position
-			input.Changed:Connect(function()
-				if input.UserInputState == Enum.UserInputState.End then dragging=false end
-			end)
-		end
-	end)
-	handle.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
-	end)
-	UIS.InputChanged:Connect(function(input) if input==dragInput and dragging then update(input) end end)
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.fromScale(1, 1)
+    label.BackgroundTransparency = 1
+    label.TextColor3 = Color3.new(1,1,1)
+    label.TextScaled = true
+    label.Font = Enum.Font.SourceSansBold
+    label.Text = "FPS: 0"
+    label.Parent = frame
+
+    self.Gui = { Screen = screenGui, Label = label }
 end
 
-function M.create(parent: Instance?, opts: table?)
-	opts = opts or {}
+function FPS:Enable()
+    if self.Enabled then return end
+    self.Enabled = true
+    if not self.Gui then self:_createGui() end
 
-	-- Detecta se vamos usar um ScreenGui próprio
-	local useOwnScreenGui = true
-	local hostScreenGui: ScreenGui? = nil
-	if typeof(parent)=="Instance" and parent:IsA("ScreenGui") then
-		useOwnScreenGui = false
-		hostScreenGui = parent
-	end
-
-	local container: Instance
-	if useOwnScreenGui then
-		local sg = Instance.new("ScreenGui")
-		sg.Name = "KScriptsFPS"
-		sg.ResetOnSpawn = false
-		sg.IgnoreGuiInset = true
-		sg.DisplayOrder = 60
-		if typeof(parent)=="Instance" and parent:IsA("PlayerGui") then
-			sg.Parent = parent
-		elseif typeof(parent)=="Instance" and parent.Parent and parent.Parent:IsA("PlayerGui") then
-			sg.Parent = parent.Parent
-		else
-			sg.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
-		end
-		container = sg
-	else
-		-- quando parent é um ScreenGui existente (ex.: KScripts rootGui), criamos uma pasta/holder
-		local holder = Instance.new("Folder")
-		holder.Name = "KScriptsFPS_Holder"
-		holder.Parent = hostScreenGui
-		container = holder
-	end
-
-	local startPos   = opts.position or UDim2.fromOffset(520, 240)
-	local startScale = tonumber(opts.scale) or 1
-
-	local win = make("Frame",{
-		Size=UDim2.fromOffset(BASE_SIZE.X, BASE_SIZE.Y),
-		Position=startPos, BackgroundColor3=C_PANEL, BorderSizePixel=0, Active=true
-	})
-	win.Parent = container
-
-	local uiScale = Instance.new("UIScale")
-	uiScale.Scale = startScale
-	uiScale.Parent = win
-
-	local header = make("Frame",{Size=UDim2.new(1,0,0,HEADER_H), BackgroundColor3=Color3.fromRGB(50,50,50), Active=true})
-	header.Parent = win
-	make("TextLabel",{Text="FPS", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=C_TEXT, BackgroundTransparency=1, Size=UDim2.fromScale(1,1)}).Parent = header
-
-	local lblNow = make("TextLabel",{BackgroundTransparency=1, Text="FPS: 0", Font=Enum.Font.GothamBold, TextSize=16, TextColor3=C_TEXT, TextXAlignment=Enum.TextXAlignment.Left, Size=UDim2.new(1,-10,0,26), Position=UDim2.fromOffset(6,HEADER_H+2)})
-	lblNow.Parent = win
-	local lblMinMax = make("TextLabel",{BackgroundTransparency=1, Text="Min: 0 | Max: 0", Font=Enum.Font.Gotham, TextSize=14, TextColor3=C_MUTED, TextXAlignment=Enum.TextXAlignment.Left, Size=UDim2.new(1,-10,0,22), Position=UDim2.fromOffset(6,HEADER_H+28)})
-	lblMinMax.Parent = win
-
-	attachDrag(win, header)
-
-	-- Redimensionamento proporcional
-	local resizing = false
-	local startMouse = Vector2.zero
-	local startAbs   = Vector2.zero
-	win.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			local mp = Vector2.new(input.Position.X, input.Position.Y)
-			local ap, as = win.AbsolutePosition, win.AbsoluteSize
-			local corner = (mp.X >= ap.X + as.X - RESIZE_MARGIN) and (mp.Y >= ap.Y + as.Y - RESIZE_MARGIN)
-			if corner and mp.Y > ap.Y + HEADER_H then
-				resizing   = true
-				startMouse = mp
-				startAbs   = as
-				input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then resizing=false end end)
-			end
-		end
-	end)
-	UIS.InputChanged:Connect(function(input)
-		if resizing and input.UserInputType==Enum.UserInputType.MouseMovement then
-			local mp = Vector2.new(input.Position.X, input.Position.Y)
-			local dx, dy = mp.X - startMouse.X, mp.Y - startMouse.Y
-			local desiredW, desiredH = startAbs.X + dx, startAbs.Y + dy
-			local scaleW, scaleH = desiredW/BASE_SIZE.X, desiredH/BASE_SIZE.Y
-			local newScale = math.clamp(math.max(scaleW,scaleH), MIN_SCALE, MAX_SCALE)
-			uiScale.Scale = newScale
-		end
-	end)
-
-	-- FPS loop
-	local minF, maxF = math.huge, 0
-	local conn = RunService.RenderStepped:Connect(function(dt)
-		local fps = math.max(0, math.floor(1/dt + 0.5))
-		minF = math.min(minF, fps)
-		maxF = math.max(maxF, fps)
-		lblNow.Text    = "FPS: " .. fps
-		lblMinMax.Text = ("Min: %d | Max: %d"):format(minF == math.huge and 0 or minF, maxF)
-	end)
-
-	local self = setmetatable({
-		_useOwnScreenGui = useOwnScreenGui,
-		_container = container, -- ScreenGui (quando próprio) ou Folder holder (quando dentro do KScripts)
-		window = win,
-		_conn = conn,
-	}, M)
-
-	function self:Destroy()
-		if self._conn then pcall(function() self._conn:Disconnect() end) end
-		if self._useOwnScreenGui then
-			-- criamos um ScreenGui dedicado → podemos apagá-lo inteiro
-			if self._container then self._container:Destroy() end
-		else
-			-- estamos hospedados dentro do KScripts rootGui → remove SÓ o que é nosso
-			if self.window then self.window:Destroy() end
-			if self._container and self._container:IsA("Folder") then self._container:Destroy() end
-		end
-	end
-	function self:Show()
-		if self._useOwnScreenGui and self._container:IsA("ScreenGui") then
-			self._container.Enabled = true
-		else
-			self.window.Visible = true
-		end
-	end
-	function self:Hide()
-		if self._useOwnScreenGui and self._container:IsA("ScreenGui") then
-			self._container.Enabled = false
-		else
-			self.window.Visible = false
-		end
-	end
-	function self:Toggle()
-		if self._useOwnScreenGui and self._container:IsA("ScreenGui") then
-			self._container.Enabled = not self._container.Enabled
-		else
-			self.window.Visible = not self.window.Visible
-		end
-	end
-
-	return self
+    self.Connection = RunService.RenderStepped:Connect(function()
+        self.FrameCount += 1
+        local now = os.clock()
+        if now - self.LastTime >= 1 then
+            self.CurrentFPS = self.FrameCount / (now - self.LastTime)
+            self.MinFPS = math.min(self.MinFPS, self.CurrentFPS)
+            self.MaxFPS = math.max(self.MaxFPS, self.CurrentFPS)
+            self.Gui.Label.Text = string.format("FPS: %d\nMin: %d | Max: %d",
+                self.CurrentFPS, self.MinFPS, self.MaxFPS)
+            self.LastTime = now
+            self.FrameCount = 0
+        end
+    end)
 end
 
-return M
+function FPS:Disable()
+    if not self.Enabled then return end
+    self.Enabled = false
+    if self.Connection then self.Connection:Disconnect() end
+    if self.Gui then self.Gui.Screen:Destroy() end
+    self.Gui = nil
+end
+
+return FPS
