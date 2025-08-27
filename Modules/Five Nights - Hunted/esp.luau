@@ -1,8 +1,7 @@
 -- Modules/Five Nights - Hunted/esp.luau
--- ESP: 
--- Player em avatar normal = Azul
--- Player em morph/animatronic = Laranja
--- NPCs/Objetos = Laranja
+-- ESP:
+-- Player normal, morph com humanoid ou até sem humanoid = Azul
+-- NPCs/Objetos (sem Player dono) = Laranja
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -71,12 +70,15 @@ function ESP.create(opts)
 	return self
 end
 
--- Detecta se o Player está em avatar normal ou em morph
-function ESP:_isNormalAvatar(model: Model, plr: Player)
-	if plr.Character ~= model then return false end
-	local head = model:FindFirstChild("Head")
-	local hrp = model:FindFirstChild("HumanoidRootPart")
-	if head and hrp then
+-- Detecta se um model pertence a um Player (mesmo sem humanoid)
+function ESP:_belongsToPlayer(model: Model)
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr.Character == model then
+			return true
+		end
+	end
+	-- fallback: alguns jogos clonam morphs nomeados com o nome do Player
+	if Players:FindFirstChild(model.Name) then
 		return true
 	end
 	return false
@@ -97,14 +99,12 @@ function ESP:_trackInstance(inst, ownerPlr, isPlayerChar)
 	local bestPart = findBestPart(inst)
 	if not bestPart then return end
 
-	local color = COLORS.objectOrange -- padrão laranja
-
-	if isPlayerChar and ownerPlr then
-		if self:_isNormalAvatar(inst, ownerPlr) then
-			color = COLORS.playerBlue -- avatar normal
-		else
-			color = COLORS.objectOrange -- morph/animatronic
-		end
+	-- regra de cor
+	local color
+	if isPlayerChar and ownerPlr and self:_belongsToPlayer(inst) then
+		color = COLORS.playerBlue -- Player real (mesmo sem humanoid)
+	else
+		color = COLORS.objectOrange -- NPC ou objeto
 	end
 
 	local highlight = createHighlight(inst, color)
@@ -161,13 +161,11 @@ function ESP:_updateOne(inst, data)
 	end
 
 	if data.highlight then
-		local color = COLORS.objectOrange
-		if data.isPlayerChar and data.ownerPlayer then
-			if self:_isNormalAvatar(inst, data.ownerPlayer) then
-				color = COLORS.playerBlue
-			else
-				color = COLORS.objectOrange
-			end
+		local color
+		if data.isPlayerChar and data.ownerPlayer and self:_belongsToPlayer(inst) then
+			color = COLORS.playerBlue -- Player real (mesmo sem humanoid)
+		else
+			color = COLORS.objectOrange
 		end
 		data.highlight.FillColor = color
 		data.highlight.OutlineColor = color
