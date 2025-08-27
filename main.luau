@@ -1,4 +1,4 @@
--- main.luau — KScripts completo (menu lateral, toast, drag) + integração FPS (corrigido)
+-- main.luau — KScripts completo (menu lateral, toast, drag) + integração FPS
 
 local Players = game:GetService("Players")
 local UIS     = game:GetService("UserInputService")
@@ -22,7 +22,7 @@ local SECTIONS     = {"Universal","Five Nights: Hunted","Settings"}
 local function make(class, props, kids)
 	local o = Instance.new(class)
 	for k,v in pairs(props or {}) do o[k]=v end
-	for _,c in ipairs(kids or {}) do c.Parent = o end
+	for _,c in ipairs(kids or {}) do c.Parent=o end
 	return o
 end
 
@@ -167,10 +167,13 @@ do
 		fpsEnabled = not fpsEnabled
 		setSwitch(fpsEnabled)
 		if fpsEnabled then
-			-- ✅ passa um ScreenGui válido (rootGui). O módulo se vira se vier outro parent.
+			-- passa um ScreenGui válido; o módulo garante não remover o KScripts
 			fpsWin = FPS.create(rootGui)
 		else
-			if fpsWin and fpsWin.Destroy then fpsWin:Destroy(); fpsWin=nil end
+			if fpsWin and fpsWin.Destroy then
+				fpsWin:Destroy() -- destruirá SÓ a janela do FPS
+				fpsWin = nil
+			end
 		end
 	end)
 end

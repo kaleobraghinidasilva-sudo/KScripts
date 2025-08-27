@@ -1,4 +1,5 @@
--- Modules/fps.luau — FPS GUI (arrastável + redimensionável + atual/min/máx) [corrigido]
+-- Modules/fps.luau — FPS GUI (arrastável + redimensionável + atual/min/máx)
+-- Corrigido: ao destruir, NÃO remove o ScreenGui do KScripts.
 
 local UIS        = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -52,23 +53,35 @@ end
 function M.create(parent: Instance?, opts: table?)
 	opts = opts or {}
 
-	-- ✅ garante um ScreenGui válido
-	local container: ScreenGui
+	-- Detecta se vamos usar um ScreenGui próprio
+	local useOwnScreenGui = true
+	local hostScreenGui: ScreenGui? = nil
 	if typeof(parent)=="Instance" and parent:IsA("ScreenGui") then
-		container = parent
-	else
-		container = Instance.new("ScreenGui")
-		container.Name = "KScriptsFPS"
-		container.ResetOnSpawn = false
-		container.IgnoreGuiInset = true
-		container.DisplayOrder = 60
+		useOwnScreenGui = false
+		hostScreenGui = parent
+	end
+
+	local container: Instance
+	if useOwnScreenGui then
+		local sg = Instance.new("ScreenGui")
+		sg.Name = "KScriptsFPS"
+		sg.ResetOnSpawn = false
+		sg.IgnoreGuiInset = true
+		sg.DisplayOrder = 60
 		if typeof(parent)=="Instance" and parent:IsA("PlayerGui") then
-			container.Parent = parent
+			sg.Parent = parent
 		elseif typeof(parent)=="Instance" and parent.Parent and parent.Parent:IsA("PlayerGui") then
-			container.Parent = parent.Parent
+			sg.Parent = parent.Parent
 		else
-			container.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+			sg.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 		end
+		container = sg
+	else
+		-- quando parent é um ScreenGui existente (ex.: KScripts rootGui), criamos uma pasta/holder
+		local holder = Instance.new("Folder")
+		holder.Name = "KScriptsFPS_Holder"
+		holder.Parent = hostScreenGui
+		container = holder
 	end
 
 	local startPos   = opts.position or UDim2.fromOffset(520, 240)
@@ -90,7 +103,6 @@ function M.create(parent: Instance?, opts: table?)
 
 	local lblNow = make("TextLabel",{BackgroundTransparency=1, Text="FPS: 0", Font=Enum.Font.GothamBold, TextSize=16, TextColor3=C_TEXT, TextXAlignment=Enum.TextXAlignment.Left, Size=UDim2.new(1,-10,0,26), Position=UDim2.fromOffset(6,HEADER_H+2)})
 	lblNow.Parent = win
-
 	local lblMinMax = make("TextLabel",{BackgroundTransparency=1, Text="Min: 0 | Max: 0", Font=Enum.Font.Gotham, TextSize=14, TextColor3=C_MUTED, TextXAlignment=Enum.TextXAlignment.Left, Size=UDim2.new(1,-10,0,22), Position=UDim2.fromOffset(6,HEADER_H+28)})
 	lblMinMax.Parent = win
 
@@ -100,7 +112,6 @@ function M.create(parent: Instance?, opts: table?)
 	local resizing = false
 	local startMouse = Vector2.zero
 	local startAbs   = Vector2.zero
-
 	win.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			local mp = Vector2.new(input.Position.X, input.Position.Y)
@@ -110,27 +121,22 @@ function M.create(parent: Instance?, opts: table?)
 				resizing   = true
 				startMouse = mp
 				startAbs   = as
-				input.Changed:Connect(function()
-					if input.UserInputState == Enum.UserInputState.End then resizing = false end
-				end)
+				input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then resizing=false end end)
 			end
 		end
 	end)
-
 	UIS.InputChanged:Connect(function(input)
-		if resizing and input.UserInputType == Enum.UserInputType.MouseMovement then
+		if resizing and input.UserInputType==Enum.UserInputType.MouseMovement then
 			local mp = Vector2.new(input.Position.X, input.Position.Y)
 			local dx, dy = mp.X - startMouse.X, mp.Y - startMouse.Y
-			local desiredW = startAbs.X + dx
-			local desiredH = startAbs.Y + dy
-			local scaleW   = desiredW / BASE_SIZE.X
-			local scaleH   = desiredH / BASE_SIZE.Y
-			local newScale = math.clamp(math.max(scaleW, scaleH), MIN_SCALE, MAX_SCALE)
-			uiScale.Scale  = newScale
+			local desiredW, desiredH = startAbs.X + dx, startAbs.Y + dy
+			local scaleW, scaleH = desiredW/BASE_SIZE.X, desiredH/BASE_SIZE.Y
+			local newScale = math.clamp(math.max(scaleW,scaleH), MIN_SCALE, MAX_SCALE)
+			uiScale.Scale = newScale
 		end
 	end)
 
-	-- FPS
+	-- FPS loop
 	local minF, maxF = math.huge, 0
 	local conn = RunService.RenderStepped:Connect(function(dt)
 		local fps = math.max(0, math.floor(1/dt + 0.5))
@@ -141,19 +147,44 @@ function M.create(parent: Instance?, opts: table?)
 	end)
 
 	local self = setmetatable({
-		container = container,
-		window    = win,
-		uiScale   = uiScale,
-		_conn     = conn,
+		_useOwnScreenGui = useOwnScreenGui,
+		_container = container, -- ScreenGui (quando próprio) ou Folder holder (quando dentro do KScripts)
+		window = win,
+		_conn = conn,
 	}, M)
 
 	function self:Destroy()
 		if self._conn then pcall(function() self._conn:Disconnect() end) end
-		if self.container then self.container:Destroy() end
+		if self._useOwnScreenGui then
+			-- criamos um ScreenGui dedicado → podemos apagá-lo inteiro
+			if self._container then self._container:Destroy() end
+		else
+			-- estamos hospedados dentro do KScripts rootGui → remove SÓ o que é nosso
+			if self.window then self.window:Destroy() end
+			if self._container and self._container:IsA("Folder") then self._container:Destroy() end
+		end
 	end
-	function self:Show()  if self.container then self.container.Enabled = true end end
-	function self:Hide()  if self.container then self.container.Enabled = false end end
-	function self:Toggle() if self.container then self.container.Enabled = not self.container.Enabled end end
+	function self:Show()
+		if self._useOwnScreenGui and self._container:IsA("ScreenGui") then
+			self._container.Enabled = true
+		else
+			self.window.Visible = true
+		end
+	end
+	function self:Hide()
+		if self._useOwnScreenGui and self._container:IsA("ScreenGui") then
+			self._container.Enabled = false
+		else
+			self.window.Visible = false
+		end
+	end
+	function self:Toggle()
+		if self._useOwnScreenGui and self._container:IsA("ScreenGui") then
+			self._container.Enabled = not self._container.Enabled
+		else
+			self.window.Visible = not self.window.Visible
+		end
+	end
 
 	return self
 end
