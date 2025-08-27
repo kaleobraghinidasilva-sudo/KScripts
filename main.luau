@@ -172,85 +172,104 @@ end
 local espEnabled, espCtl, walkCtl = false, nil, WalkspeedModule.new()
 do
 	local fnH = sectionFrames["Five Nights: Hunted"]
+
 	-- ESP
 	make("TextLabel",{Text="ESP", Font=Enum.Font.GothamBold, TextSize=16, TextColor3=COLORS.TEXT, BackgroundTransparency=1, Size=UDim2.fromOffset(200,26), Position=UDim2.fromOffset(4,4)}).Parent = fnH
 	local espSwitch = make("TextButton",{BackgroundColor3=COLORS.BTN, Size=UDim2.fromOffset(54,26), Position=UDim2.fromOffset(220,4)},{ make("UICorner",{CornerRadius=UDim.new(0,13)}) })
 	espSwitch.Parent = fnH
 	local espBall = make("Frame",{Size=UDim2.fromOffset(22,22), Position=UDim2.fromOffset(2,2), BackgroundColor3=Color3.fromRGB(200,200,200)},{ make("UICorner",{CornerRadius=UDim.new(0,11)}) })
 	espBall.Parent = espSwitch
-	local function setESPSwitch(on: boolean) if on then espBall:TweenPosition(UDim2.fromOffset(30,2),"Out","Quad",0.15,true) espBall.BackgroundColor3=COLORS.ACCENT else espBall:TweenPosition(UDim2.fromOffset(2,2),"Out","Quad",0.15,true) espBall.BackgroundColor3=Color3.fromRGB(200,200,200) end end
+	local function setESPSwitch(on: boolean)
+		if on then
+			espBall:TweenPosition(UDim2.fromOffset(30,2),"Out","Quad",0.15,true)
+			espBall.BackgroundColor3=COLORS.ACCENT
+		else
+			espBall:TweenPosition(UDim2.fromOffset(2,2),"Out","Quad",0.15,true)
+			espBall.BackgroundColor3=Color3.fromRGB(200,200,200)
+		end
+	end
 	espSwitch.MouseButton1Click:Connect(function()
 		espEnabled = not espEnabled
 		setESPSwitch(espEnabled)
-		if espEnabled then if not espCtl then espCtl=ESPModule.create({MaxDistance=3000,UpdateHz=10}) end espCtl:Enable() else if espCtl then espCtl:Disable() end end
+		if espEnabled then
+			if not espCtl then
+				espCtl=ESPModule.create({MaxDistance=3000,UpdateHz=10})
+			end
+			espCtl:Enable()
+		else
+			if espCtl then espCtl:Disable() end
+		end
 	end)
 
--- Walkspeed
-make("TextLabel",{
-    Text="Walkspeed", Font=Enum.Font.GothamBold, TextSize=16,
-    TextColor3=COLORS.TEXT, BackgroundTransparency=1,
-    Size=UDim2.fromOffset(200,26), Position=UDim2.fromOffset(4,40),
-    TextXAlignment=Enum.TextXAlignment.Left
-}).Parent = fnH
+	-- Walkspeed
+	make("TextLabel",{
+		Text="Walkspeed", Font=Enum.Font.GothamBold, TextSize=16,
+		TextColor3=COLORS.TEXT, BackgroundTransparency=1,
+		Size=UDim2.fromOffset(200,26), Position=UDim2.fromOffset(4,40),
+		TextXAlignment=Enum.TextXAlignment.Left
+	}).Parent = fnH
 
-local wsKeyBtn = make("TextButton",{
-    Text="Set Key", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT,
-    BackgroundColor3=COLORS.BTN, Size=UDim2.fromOffset(100,26), Position=UDim2.fromOffset(220,40)
-})
-wsKeyBtn.Parent = fnH
+	local wsKeyBtn = make("TextButton",{
+		Text="Set Key", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT,
+		BackgroundColor3=COLORS.BTN, Size=UDim2.fromOffset(100,26), Position=UDim2.fromOffset(220,40)
+	})
+	wsKeyBtn.Parent = fnH
 
-local clearBtn = make("TextButton",{
-    Text="Clear Key", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT,
-    BackgroundColor3=COLORS.BTN, Size=UDim2.fromOffset(100,26), Position=UDim2.fromOffset(330,40)
-})
-clearBtn.Parent = fnH
+	local clearBtn = make("TextButton",{
+		Text="Clear Key", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT,
+		BackgroundColor3=COLORS.BTN, Size=UDim2.fromOffset(100,26), Position=UDim2.fromOffset(330,40)
+	})
+	clearBtn.Parent = fnH
 
-local baseBox = make("TextBox",{
-    Text="16", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT,
-    BackgroundColor3=COLORS.PANEL, Size=UDim2.fromOffset(60,26), Position=UDim2.fromOffset(220,75)
-})
-baseBox.Parent = fnH
+	local baseBox = make("TextBox",{
+		Text="16", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT,
+		BackgroundColor3=COLORS.PANEL, Size=UDim2.fromOffset(60,26), Position=UDim2.fromOffset(220,75)
+	})
+	baseBox.Parent = fnH
 
-local boostBox = make("TextBox",{
-    Text="32", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT,
-    BackgroundColor3=COLORS.PANEL, Size=UDim2.fromOffset(60,26), Position=UDim2.fromOffset(290,75)
-})
-boostBox.Parent = fnH
+	local boostBox = make("TextBox",{
+		Text="32", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT,
+		BackgroundColor3=COLORS.PANEL, Size=UDim2.fromOffset(60,26), Position=UDim2.fromOffset(290,75)
+	})
+	boostBox.Parent = fnH
 
-make("TextLabel",{
-    Text="Base", Font=Enum.Font.Gotham, TextSize=12, TextColor3=COLORS.MUTED,
-    BackgroundTransparency=1, Size=UDim2.fromOffset(40,20), Position=UDim2.fromOffset(220,100)
-}).Parent = fnH
+	make("TextLabel",{
+		Text="Base", Font=Enum.Font.Gotham, TextSize=12, TextColor3=COLORS.MUTED,
+		BackgroundTransparency=1, Size=UDim2.fromOffset(40,20), Position=UDim2.fromOffset(220,100)
+	}).Parent = fnH
 
-make("TextLabel",{
-    Text="Boost", Font=Enum.Font.Gotham, TextSize=12, TextColor3=COLORS.MUTED,
-    BackgroundTransparency=1, Size=UDim2.fromOffset(40,20), Position=UDim2.fromOffset(290,100)
-}).Parent = fnH
+	make("TextLabel",{
+		Text="Boost", Font=Enum.Font.Gotham, TextSize=12, TextColor3=COLORS.MUTED,
+		BackgroundTransparency=1, Size=UDim2.fromOffset(40,20), Position=UDim2.fromOffset(290,100)
+	}).Parent = fnH
 
-local currentKey = nil
-wsKeyBtn.MouseButton1Click:Connect(function()
-    wsKeyBtn.Text="Press..."
-    local conn; conn=UIS.InputBegan:Connect(function(input,gp)
-        if not gp and input.KeyCode~=Enum.KeyCode.Unknown then
-            currentKey=input.KeyCode
-            walkCtl:SetKey(currentKey)
-            wsKeyBtn.Text="Key: "..input.KeyCode.Name
-            conn:Disconnect()
-        end
-    end)
-end)
+	local currentKey = nil
+	wsKeyBtn.MouseButton1Click:Connect(function()
+		wsKeyBtn.Text="Press..."
+		local conn; conn=UIS.InputBegan:Connect(function(input,gp)
+			if not gp and input.KeyCode~=Enum.KeyCode.Unknown then
+				currentKey=input.KeyCode
+				walkCtl:SetKey(currentKey)
+				wsKeyBtn.Text="Key: "..input.KeyCode.Name
+				conn:Disconnect()
+			end
+		end)
+	end)
 
-clearBtn.MouseButton1Click:Connect(function()
-    currentKey=nil
-    walkCtl:SetKey(nil)
-    wsKeyBtn.Text="Set Key"
-end)
+	clearBtn.MouseButton1Click:Connect(function()
+		currentKey=nil
+		walkCtl:SetKey(nil)
+		wsKeyBtn.Text="Set Key"
+	end)
 
-local function updateSpeeds()
-    walkCtl:SetSpeeds(tonumber(baseBox.Text) or 16, tonumber(boostBox.Text) or 32)
-end
-baseBox.FocusLost:Connect(updateSpeeds)
-boostBox.FocusLost:Connect(updateSpeeds)
+	local function updateSpeeds()
+		local base = tonumber(baseBox.Text) or 16
+		local boost = tonumber(boostBox.Text) or 32
+		walkCtl:SetSpeeds(base, boost)
+	end
+	baseBox.FocusLost:Connect(updateSpeeds)
+	boostBox.FocusLost:Connect(updateSpeeds)
+
 
 -- Fechar
 close.MouseButton1Click:Connect(function()
