@@ -131,7 +131,7 @@ local bar = make("Frame", {
 bar.Parent = win
 make("TextLabel", {
 	BackgroundTransparency=1, Text="KScripts",
-	Font=Enum.Font.GothamBold, TextSize=16, TextColor3=COLORS.TEXТ,
+	Font=Enum.Font.GothamBold, TextSize=16, TextColor3=COLORS.TEXT,
 	TextXAlignment=Enum.TextXAlignment.Center, Size=UDim2.fromScale(1,1)
 }).Parent = bar
 local close = make("TextButton", {
@@ -147,7 +147,7 @@ local body = make("Frame", {
 	Size=UDim2.new(1,-PAD*2,1,-(TITLEBAR_H+PAD*2)),
 	Position=UDim2.fromOffset(PAD, TITLEBAR_H+PAD)
 })
-	body.Parent = win
+body.Parent = win
 
 -- Sidebar à esquerda
 local sidebar = make("ScrollingFrame", {
@@ -155,7 +155,7 @@ local sidebar = make("ScrollingFrame", {
 	BackgroundColor3=COLORS.PANEL, BorderSizePixel=0,
 	ScrollBarThickness=8, ScrollingDirection=Enum.ScrollingDirection.Y,
 	Active=true,
-	Size=UDim2.new(0, 200, 1, 0),
+	Size=UDim2.new(0, SIDEBAR_W, 1, 0),
 	Position=UDim2.fromOffset(0,0)
 }, { make("UICorner",{CornerRadius=UDim.new(0,10)}) })
 sidebar.Parent = body
@@ -173,8 +173,8 @@ local content = make("ScrollingFrame", {
 	BackgroundColor3=COLORS.PANEL, BorderSizePixel=0,
 	ScrollBarThickness=8, ScrollingDirection=Enum.ScrollingDirection.Y,
 	Active=true,
-	Position=UDim2.fromOffset(200 + PAD, 0),
-	Size=UDim2.new(1, -(200 + PAD), 1, 0)
+	Position=UDim2.fromOffset(SIDEBAR_W + PAD, 0),
+	Size=UDim2.new(1, -(SIDEBAR_W + PAD), 1, 0)
 }, { make("UICorner",{CornerRadius=UDim.new(0,10)}) })
 content.Parent = body
 make("UIPadding", {
@@ -349,7 +349,7 @@ do
 	baseBox.FocusLost:Connect(updateSpeeds)
 	boostBox.FocusLost:Connect(updateSpeeds)
 
-	-- Show Computers (novo)
+	-- Show Computers
 	make("TextLabel", {
 		Text="Show Computers", Font=Enum.Font.GothamBold, TextSize=16,
 		TextColor3=COLORS.TEXT, BackgroundTransparency=1,
@@ -365,6 +365,7 @@ do
 		BackgroundColor3=Color3.fromRGB(200,200,200)
 	}, { make("UICorner",{CornerRadius=UDim.new(0,11)}) })
 	scBall.Parent = scSwitch
+	local scEnabled, scCtl = false, nil
 	local function setSCSwitch(on: boolean)
 		if on then
 			scBall:TweenPosition(UDim2.fromOffset(30,2),"Out","Quad",0.15,true)

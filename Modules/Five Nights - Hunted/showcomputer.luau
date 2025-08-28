@@ -1,6 +1,5 @@
 -- Modules/Five Nights - Hunted/showcomputer.luau
 -- Destaca TODOS os objetos chamados "Computer"/"computer" (case-insensitive), sem limite de distância.
--- API: local mod = ShowComputer.new({color = Color3.fromRGB(0,255,0), name = "computer"}); mod:Enable(); mod:Disable(); mod:Destroy()
 
 local Workspace = game:GetService("Workspace")
 
@@ -18,7 +17,7 @@ function ShowComputer.new(opts)
 	local self = setmetatable({}, ShowComputer)
 	self.Enabled = false
 	self._tracked = {}  -- [Instance] = {h=Highlight, conns={...}}
-	self._conns = {}    -- conexões globais (added/removing)
+	self._conns = {}    -- conexões globais
 
 	self.targetLower = string.lower(opts.name or "computer")
 	self.color = opts.color or Color3.fromRGB(0,255,0)
@@ -60,11 +59,9 @@ function ShowComputer:_track(inst: Instance)
 
 	local h = self:_createHighlight(inst)
 	local conns = {}
-
 	table.insert(conns, inst.AncestryChanged:Connect(function(_, parent)
 		if not parent then self:_cleanup(inst) end
 	end))
-
 	table.insert(conns, inst:GetPropertyChangedSignal("Name"):Connect(function()
 		if not self:_isTarget(inst) then self:_cleanup(inst) end
 	end))
@@ -83,13 +80,9 @@ end
 function ShowComputer:Enable()
 	if self.Enabled then return end
 	self.Enabled = true
-
-	-- varredura inicial
 	for _,d in ipairs(Workspace:GetDescendants()) do
 		self:_consider(d)
 	end
-
-	-- dinâmico
 	table.insert(self._conns, Workspace.DescendantAdded:Connect(function(inst)
 		self:_consider(inst)
 	end))
