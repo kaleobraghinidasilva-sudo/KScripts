@@ -1,16 +1,18 @@
--- main.luau — KScripts (layout original corrigido) + Settings (Show FPS) + Five Nights: Hunted (ESP + Walkspeed)
+-- main.luau — KScripts (layout original) + Settings (Show FPS) + Five Nights: Hunted (ESP + Walkspeed + Show Computers)
 
 local Players = game:GetService("Players")
 local UIS     = game:GetService("UserInputService")
 
 -- RAWs dos módulos
-local FPS_URL       = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Settings/fps.luau"
-local ESP_URL       = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/esp.luau"
-local WALKSPEED_URL = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/walkspeed.luau"
+local FPS_URL         = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Settings/fps.luau"
+local ESP_URL         = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/esp.luau"
+local WALKSPEED_URL   = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/walkspeed.luau"
+local SHOWCOMP_URL    = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/showcomputer.luau"
 
-local FPS             = loadstring(game:HttpGet(FPS_URL))()
-local ESPModule       = loadstring(game:HttpGet(ESP_URL))()
-local WalkspeedModule = loadstring(game:HttpGet(WALKSPEED_URL))()
+local FPS              = loadstring(game:HttpGet(FPS_URL))()
+local ESPModule        = loadstring(game:HttpGet(ESP_URL))()
+local WalkspeedModule  = loadstring(game:HttpGet(WALKSPEED_URL))()
+local ShowComputerMod  = loadstring(game:HttpGet(SHOWCOMP_URL))()
 
 -- =================== UI CONSTS ===================
 local TITLEBAR_H, SIDEBAR_W, PAD = 36, 200, 8
@@ -71,7 +73,6 @@ local function attachDrag(frame: Frame, handle: GuiObject)
 	end)
 end
 
--- barra de rolagem visível mesmo vazia
 local function forceYScroll(sf: ScrollingFrame)
 	local function upd()
 		local a = sf.AbsoluteSize
@@ -90,7 +91,7 @@ local rootGui = make("ScreenGui", {
 })
 rootGui.Parent = playerGui
 
--- Toast no canto inferior direito
+-- Toast
 local toastGui = make("ScreenGui", {
 	Name="KScriptsToast", ResetOnSpawn=false, IgnoreGuiInset=true, DisplayOrder=10000
 })
@@ -130,7 +131,7 @@ local bar = make("Frame", {
 bar.Parent = win
 make("TextLabel", {
 	BackgroundTransparency=1, Text="KScripts",
-	Font=Enum.Font.GothamBold, TextSize=16, TextColor3=COLORS.TEXT,
+	Font=Enum.Font.GothamBold, TextSize=16, TextColor3=COLORS.TEXТ,
 	TextXAlignment=Enum.TextXAlignment.Center, Size=UDim2.fromScale(1,1)
 }).Parent = bar
 local close = make("TextButton", {
@@ -146,15 +147,15 @@ local body = make("Frame", {
 	Size=UDim2.new(1,-PAD*2,1,-(TITLEBAR_H+PAD*2)),
 	Position=UDim2.fromOffset(PAD, TITLEBAR_H+PAD)
 })
-body.Parent = win
+	body.Parent = win
 
--- Sidebar fixa à esquerda
+-- Sidebar à esquerda
 local sidebar = make("ScrollingFrame", {
 	Name="Sidebar",
 	BackgroundColor3=COLORS.PANEL, BorderSizePixel=0,
 	ScrollBarThickness=8, ScrollingDirection=Enum.ScrollingDirection.Y,
 	Active=true,
-	Size=UDim2.new(0, SIDEBAR_W, 1, 0),
+	Size=UDim2.new(0, 200, 1, 0),
 	Position=UDim2.fromOffset(0,0)
 }, { make("UICorner",{CornerRadius=UDim.new(0,10)}) })
 sidebar.Parent = body
@@ -166,14 +167,14 @@ local sbList = make("UIListLayout", { Padding=UDim.new(0,6) })
 sbList.Parent = sidebar
 forceYScroll(sidebar)
 
--- Conteúdo ocupa o resto à direita
+-- Conteúdo à direita
 local content = make("ScrollingFrame", {
 	Name="Content",
 	BackgroundColor3=COLORS.PANEL, BorderSizePixel=0,
 	ScrollBarThickness=8, ScrollingDirection=Enum.ScrollingDirection.Y,
 	Active=true,
-	Position=UDim2.fromOffset(SIDEBAR_W + PAD, 0),
-	Size=UDim2.new(1, -(SIDEBAR_W + PAD), 1, 0)
+	Position=UDim2.fromOffset(200 + PAD, 0),
+	Size=UDim2.new(1, -(200 + PAD), 1, 0)
 }, { make("UICorner",{CornerRadius=UDim.new(0,10)}) })
 content.Parent = body
 make("UIPadding", {
@@ -182,17 +183,15 @@ make("UIPadding", {
 }).Parent = content
 forceYScroll(content)
 
--- =================== SECTIONS ===================
+-- Seções
 local sectionFrames, sidebarButtons = {}, {}
 local function setActive(name: string)
 	for n,btn in pairs(sidebarButtons) do
-		if n==name then
-			btn.BackgroundColor3 = COLORS.ACCENT
-		else
-			btn.BackgroundColor3 = COLORS.BTN
-		end
+		btn.BackgroundColor3 = (n==name) and COLORS.ACCENT or COLORS.BTN
 	end
-	for n,fr in pairs(sectionFrames) do fr.Visible = (n==name) end
+	for n,fr in pairs(sectionFrames) do
+		fr.Visible = (n==name)
+	end
 end
 
 for _, name in ipairs(SECTIONS) do
@@ -213,7 +212,7 @@ for _, name in ipairs(SECTIONS) do
 end
 setActive(SECTIONS[1])
 
--- =================== SETTINGS: FPS ===================
+-- SETTINGS: FPS
 local fpsEnabled, fpsWin = false, nil
 do
 	local settings = sectionFrames["Settings"]
@@ -248,15 +247,16 @@ do
 		fpsEnabled = not fpsEnabled
 		setSwitch(fpsEnabled)
 		if fpsEnabled then
-			fpsWin = FPS.create(rootGui) -- o módulo já cria a sua própria janela arrastável/redimensionável
+			fpsWin = FPS.create(rootGui)
 		else
-			if fpsWin then fpsWin:Destroy() fpsWin = nil end
+			if fpsWin then fpsWin:Destroy() fpsWin=nil end
 		end
 	end)
 end
 
--- ========== FIVE NIGHTS: HUNTED — ESP + WALKSPEED ==========
+-- FIVE NIGHTS: ESP + Walkspeed + Show Computers
 local espEnabled, espCtl, walkCtl = false, nil, WalkspeedModule.new()
+local scEnabled, scCtl = false, nil
 do
 	local fnH = sectionFrames["Five Nights: Hunted"]
 
@@ -266,7 +266,6 @@ do
 		TextColor3=COLORS.TEXT, BackgroundTransparency=1,
 		Size=UDim2.fromOffset(200,26), Position=UDim2.fromOffset(4,4)
 	}).Parent = fnH
-
 	local espSwitch = make("TextButton", {
 		Text="", BackgroundColor3=COLORS.BTN, AutoButtonColor=true,
 		Size=UDim2.fromOffset(54,26), Position=UDim2.fromOffset(220,4)
@@ -277,7 +276,6 @@ do
 		BackgroundColor3=Color3.fromRGB(200,200,200)
 	}, { make("UICorner",{CornerRadius=UDim.new(0,11)}) })
 	espBall.Parent = espSwitch
-
 	local function setESPSwitch(on: boolean)
 		if on then
 			espBall:TweenPosition(UDim2.fromOffset(30,2),"Out","Quad",0.15,true)
@@ -287,71 +285,51 @@ do
 			espBall.BackgroundColor3 = Color3.fromRGB(200,200,200)
 		end
 	end
-
 	espSwitch.MouseButton1Click:Connect(function()
 		espEnabled = not espEnabled
 		setESPSwitch(espEnabled)
 		if espEnabled then
-			if not espCtl then
-				espCtl = ESPModule.create({ MaxDistance=3000, UpdateHz=10 })
-			end
+			if not espCtl then espCtl = ESPModule.create({MaxDistance=3000, UpdateHz=10}) end
 			espCtl:Enable()
 		else
 			if espCtl then espCtl:Disable() end
 		end
 	end)
 
-	-- Walkspeed
+	-- Walkspeed (tecla + base/boost)
 	make("TextLabel", {
 		Text="Walkspeed", Font=Enum.Font.GothamBold, TextSize=16,
 		TextColor3=COLORS.TEXT, BackgroundTransparency=1,
 		Size=UDim2.fromOffset(200,26), Position=UDim2.fromOffset(4,40),
 		TextXAlignment=Enum.TextXAlignment.Left
 	}).Parent = fnH
-
 	local wsKeyBtn = make("TextButton", {
 		Text="Set Key", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT,
 		BackgroundColor3=COLORS.BTN, Size=UDim2.fromOffset(100,26),
 		Position=UDim2.fromOffset(220,40)
-	})
-	wsKeyBtn.Parent = fnH
-
+	}); wsKeyBtn.Parent = fnH
 	local clearBtn = make("TextButton", {
 		Text="Clear Key", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT,
 		BackgroundColor3=COLORS.BTN, Size=UDim2.fromOffset(100,26),
 		Position=UDim2.fromOffset(330,40)
-	})
-	clearBtn.Parent = fnH
-
+	}); clearBtn.Parent = fnH
 	local baseBox = make("TextBox", {
 		Text="16", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT,
 		BackgroundColor3=COLORS.PANEL, Size=UDim2.fromOffset(60,26),
 		Position=UDim2.fromOffset(220,75)
-	})
-	baseBox.Parent = fnH
-
+	}); baseBox.Parent = fnH
 	local boostBox = make("TextBox", {
 		Text="32", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT,
 		BackgroundColor3=COLORS.PANEL, Size=UDim2.fromOffset(60,26),
 		Position=UDim2.fromOffset(290,75)
-	})
-	boostBox.Parent = fnH
-
-	make("TextLabel", {
-		Text="Base", Font=Enum.Font.Gotham, TextSize=12, TextColor3=COLORS.MUTED,
-		BackgroundTransparency=1, Size=UDim2.fromOffset(40,20),
-		Position=UDim2.fromOffset(220,100)
-	}).Parent = fnH
-	make("TextLabel", {
-		Text="Boost", Font=Enum.Font.Gotham, TextSize=12, TextColor3=COLORS.MUTED,
-		BackgroundTransparency=1, Size=UDim2.fromOffset(40,20),
-		Position=UDim2.fromOffset(290,100)
-	}).Parent = fnH
+	}); boostBox.Parent = fnH
+	make("TextLabel", {Text="Base",  Font=Enum.Font.Gotham, TextSize=12, TextColor3=COLORS.MUTED, BackgroundTransparency=1, Size=UDim2.fromOffset(40,20), Position=UDim2.fromOffset(220,100)}).Parent = fnH
+	make("TextLabel", {Text="Boost", Font=Enum.Font.Gotham, TextSize=12, TextColor3=COLORS.MUTED, BackgroundTransparency=1, Size=UDim2.fromOffset(40,20), Position=UDim2.fromOffset(290,100)}).Parent = fnH
 
 	local currentKey: Enum.KeyCode? = nil
 	wsKeyBtn.MouseButton1Click:Connect(function()
-		wsKeyBtn.Text = "Press..."
-		local conn; conn = UIS.InputBegan:Connect(function(input, gp)
+		wsKeyBtn.Text="Press..."
+		local conn; conn = UIS.InputBegan:Connect(function(input,gp)
 			if not gp and input.KeyCode ~= Enum.KeyCode.Unknown then
 				currentKey = input.KeyCode
 				walkCtl:SetKey(currentKey)
@@ -361,16 +339,52 @@ do
 		end)
 	end)
 	clearBtn.MouseButton1Click:Connect(function()
-		currentKey = nil
+		currentKey=nil
 		walkCtl:SetKey(nil)
-		wsKeyBtn.Text = "Set Key"
+		wsKeyBtn.Text="Set Key"
 	end)
 	local function updateSpeeds()
 		walkCtl:SetSpeeds(tonumber(baseBox.Text) or 16, tonumber(boostBox.Text) or 32)
 	end
 	baseBox.FocusLost:Connect(updateSpeeds)
 	boostBox.FocusLost:Connect(updateSpeeds)
-end -- fecha bloco da seção
+
+	-- Show Computers (novo)
+	make("TextLabel", {
+		Text="Show Computers", Font=Enum.Font.GothamBold, TextSize=16,
+		TextColor3=COLORS.TEXT, BackgroundTransparency=1,
+		Size=UDim2.fromOffset(200,26), Position=UDim2.fromOffset(4,130)
+	}).Parent = fnH
+	local scSwitch = make("TextButton", {
+		Text="", BackgroundColor3=COLORS.BTN, AutoButtonColor=true,
+		Size=UDim2.fromOffset(54,26), Position=UDim2.fromOffset(220,130)
+	}, { make("UICorner",{CornerRadius=UDim.new(0,13)}) })
+	scSwitch.Parent = fnH
+	local scBall = make("Frame", {
+		Size=UDim2.fromOffset(22,22), Position=UDim2.fromOffset(2,2),
+		BackgroundColor3=Color3.fromRGB(200,200,200)
+	}, { make("UICorner",{CornerRadius=UDim.new(0,11)}) })
+	scBall.Parent = scSwitch
+	local function setSCSwitch(on: boolean)
+		if on then
+			scBall:TweenPosition(UDim2.fromOffset(30,2),"Out","Quad",0.15,true)
+			scBall.BackgroundColor3 = COLORS.ACCENT
+		else
+			scBall:TweenPosition(UDim2.fromOffset(2,2),"Out","Quad",0.15,true)
+			scBall.BackgroundColor3 = Color3.fromRGB(200,200,200)
+		end
+	end
+	scSwitch.MouseButton1Click:Connect(function()
+		scEnabled = not scEnabled
+		setSCSwitch(scEnabled)
+		if scEnabled then
+			if not scCtl then scCtl = ShowComputerMod.new({color = Color3.fromRGB(0,255,0), name = "computer"}) end
+			scCtl:Enable()
+		else
+			if scCtl then scCtl:Disable() end
+		end
+	end)
+end
 
 -- Fechar + F1
 close.MouseButton1Click:Connect(function()
@@ -378,7 +392,9 @@ close.MouseButton1Click:Connect(function()
 	showToast("KScripts oculto. Pressione F1 para reabrir.", 3.5)
 end)
 UIS.InputBegan:Connect(function(input,gp)
-	if not gp and input.KeyCode==Enum.KeyCode.F1 then win.Visible = not win.Visible end
+	if not gp and input.KeyCode==Enum.KeyCode.F1 then
+		win.Visible = not win.Visible
+	end
 end)
 
-print("KScripts: GUI carregada (FPS + ESP + Walkspeed).")
+print("KScripts: GUI carregada (FPS + ESP + Walkspeed + Show Computers).")
