@@ -1,23 +1,18 @@
 -- main.luau — KScripts (layout original) + Settings (Show FPS) +
 -- Five Nights: Hunted (ESP + Walkspeed + Show Computers + Show Ball Pits)
+-- Hardened: se algum módulo remoto falhar, a GUI AINDA abre e mostra um toast de erro.
 
 local Players = game:GetService("Players")
 local UIS     = game:GetService("UserInputService")
 
--- RAWs dos módulos
+-- URLs
 local FPS_URL          = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Settings/fps.luau"
 local ESP_URL          = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/esp.luau"
 local WALKSPEED_URL    = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Universal/walkspeed.luau"
 local SHOWCOMP_URL     = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/showcomputer.luau"
 local SHOWBALLPIT_URL  = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/showballpit.luau"
 
-local FPS             = loadstring(game:HttpGet(FPS_URL))()
-local ESPModule       = loadstring(game:HttpGet(ESP_URL))()
-local WalkspeedModule = loadstring(game:HttpGet(WALKSPEED_URL))()
-local ShowComputerMod = loadstring(game:HttpGet(SHOWCOMP_URL))()
-local ShowBallPitMod  = loadstring(game:HttpGet(SHOWBALLPIT_URL))()
-
--- =================== UI CONSTS ===================
+-- ========= helpers de UI =========
 local TITLEBAR_H, SIDEBAR_W, PAD = 36, 200, 8
 local DEFAULT_SIZE = Vector2.new(860, 520)
 local SECTIONS = { "Universal", "Five Nights: Hunted", "Settings" }
@@ -31,7 +26,6 @@ local COLORS = {
 	BTN    = Color3.fromRGB(60,60,60),
 }
 
--- =================== HELPERS ===================
 local function make(class, props, kids)
 	local o = Instance.new(class)
 	for k,v in pairs(props or {}) do o[k]=v end
@@ -85,7 +79,7 @@ local function forceYScroll(sf: ScrollingFrame)
 	sf:GetPropertyChangedSignal("AbsoluteSize"):Connect(upd)
 end
 
--- =================== BUILD ROOT ===================
+-- ========= ROOT GUI =========
 local player    = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
@@ -119,6 +113,32 @@ local function showToast(msg: string, duration: number?)
 	task.delay(duration, function() if holder then holder:Destroy() end end)
 end
 
+-- ========= carregador robusto de módulos =========
+local function safeFetch(url: string, name: string)
+	local okGet, src = pcall(function() return game:HttpGet(url) end)
+	if not okGet then
+		showToast(("Falha ao baixar módulo '%s'"):format(name))
+		return nil, ("HttpGet fail: %s"):format(name)
+	end
+	local okChunk, chunk = pcall(loadstring, src)
+	if not okChunk then
+		showToast(("Falha ao compilar módulo '%s'"):format(name))
+		return nil, ("loadstring fail: %s"):format(name)
+	end
+	local okRet, mod = pcall(chunk)
+	if not okRet then
+		showToast(("Falha ao iniciar módulo '%s'"):format(name))
+		return nil, ("chunk run fail: %s"):format(name)
+	end
+	return mod, nil
+end
+
+-- busca módulos (sem travar GUI se algo falhar)
+local FPS, ESPModule, WalkspeedModule, ShowComputerMod, ShowBallPitMod = safeFetch(FPS_URL,"fps"),
+	safeFetch(ESP_URL,"esp"), safeFetch(WALKSPEED_URL,"walkspeed"),
+	safeFetch(SHOWCOMP_URL,"showcomputer"), safeFetch(SHOWBALLPIT_URL,"showballpit")
+
+-- ========= janela principal =========
 local startPos = centerOffset(DEFAULT_SIZE)
 local win = make("Frame", {
 	Name="KScriptsWindow",
@@ -170,7 +190,7 @@ local sbList = make("UIListLayout", { Padding=UDim.new(0,6) })
 sbList.Parent = sidebar
 forceYScroll(sidebar)
 
--- Conteúdo
+-- Content
 local content = make("ScrollingFrame", {
 	Name="Content",
 	BackgroundColor3=COLORS.PANEL, BorderSizePixel=0,
@@ -215,7 +235,7 @@ for _, name in ipairs(SECTIONS) do
 end
 setActive(SECTIONS[1])
 
--- =============== SETTINGS: Show FPS ===============
+-- ===== Settings: Show FPS =====
 local fpsEnabled, fpsWin = false, nil
 do
 	local settings = sectionFrames["Settings"]
@@ -247,6 +267,7 @@ do
 	end
 
 	switch.MouseButton1Click:Connect(function()
+		if not FPS then showToast("Módulo FPS ausente"); return end
 		fpsEnabled = not fpsEnabled
 		setSwitch(fpsEnabled)
 		if fpsEnabled then
@@ -257,11 +278,11 @@ do
 	end)
 end
 
--- ===== FIVE NIGHTS: ESP + Show Computers + Show Ball Pits + Walkspeed =====
+-- ===== Five Nights: ESP + Show Computers + Show Ball Pits + Walkspeed =====
 local espEnabled, espCtl = false, nil
 local scEnabled, scCtl   = false, nil
 local bpEnabled, bpCtl   = false, nil
-local walkCtl            = WalkspeedModule.new()
+local walkCtl = WalkspeedModule and WalkspeedModule.new() or nil
 
 do
 	local fnH = sectionFrames["Five Nights: Hunted"]
@@ -292,6 +313,7 @@ do
 		end
 	end
 	espSwitch.MouseButton1Click:Connect(function()
+		if not ESPModule then showToast("Módulo ESP ausente"); return end
 		espEnabled = not espEnabled
 		setESPSwitch(espEnabled)
 		if espEnabled then
@@ -302,7 +324,7 @@ do
 		end
 	end)
 
-	-- Show Computers (verde) — acima do Walkspeed
+	-- Show Computers (verde)
 	make("TextLabel", {
 		Text="Show Computers", Font=Enum.Font.GothamBold, TextSize=16,
 		TextColor3=COLORS.TEXT, BackgroundTransparency=1,
@@ -328,6 +350,7 @@ do
 		end
 	end
 	scSwitch.MouseButton1Click:Connect(function()
+		if not ShowComputerMod then showToast("Módulo Show Computers ausente"); return end
 		scEnabled = not scEnabled
 		setSCSwitch(scEnabled)
 		if scEnabled then
@@ -338,7 +361,7 @@ do
 		end
 	end)
 
-	-- Show Ball Pits (vermelho) — NOVO, abaixo do Show Computers
+	-- Show Ball Pits (vermelho) — NOVO
 	make("TextLabel", {
 		Text="Show Ball Pits", Font=Enum.Font.GothamBold, TextSize=16,
 		TextColor3=COLORS.TEXT, BackgroundTransparency=1,
@@ -364,6 +387,7 @@ do
 		end
 	end
 	bpSwitch.MouseButton1Click:Connect(function()
+		if not ShowBallPitMod then showToast("Módulo Show Ball Pits ausente"); return end
 		bpEnabled = not bpEnabled
 		setBPSwitch(bpEnabled)
 		if bpEnabled then
@@ -374,7 +398,7 @@ do
 		end
 	end)
 
-	-- Walkspeed (foi jogado mais pra baixo por causa do Ball Pit)
+	-- Walkspeed (tecla + base/boost)
 	make("TextLabel", {
 		Text="Walkspeed", Font=Enum.Font.GothamBold, TextSize=16,
 		TextColor3=COLORS.TEXT, BackgroundTransparency=1,
@@ -411,6 +435,7 @@ do
 
 	local currentKey: Enum.KeyCode? = nil
 	wsKeyBtn.MouseButton1Click:Connect(function()
+		if not walkCtl then showToast("Módulo Walkspeed ausente"); return end
 		wsKeyBtn.Text="Press..."
 		local conn; conn = UIS.InputBegan:Connect(function(input,gp)
 			if not gp and input.KeyCode ~= Enum.KeyCode.Unknown then
@@ -422,11 +447,13 @@ do
 		end)
 	end)
 	clearBtn.MouseButton1Click:Connect(function()
+		if not walkCtl then return end
 		currentKey=nil
 		walkCtl:SetKey(nil)
 		wsKeyBtn.Text="Set Key"
 	end)
 	local function updateSpeeds()
+		if not walkCtl then return end
 		walkCtl:SetSpeeds(tonumber(baseBox.Text) or 16, tonumber(boostBox.Text) or 32)
 	end
 	baseBox.FocusLost:Connect(updateSpeeds)
