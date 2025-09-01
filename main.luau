@@ -1,18 +1,21 @@
--- main.luau — KScripts (layout original) + Settings (Show FPS) + Five Nights: Hunted (ESP + Walkspeed + Show Computers)
+-- main.luau — KScripts (layout original) + Settings (Show FPS) +
+-- Five Nights: Hunted (ESP + Walkspeed + Show Computers + Show Ball Pits)
 
 local Players = game:GetService("Players")
 local UIS     = game:GetService("UserInputService")
 
 -- RAWs dos módulos
-local FPS_URL         = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Settings/showfps.luau"
-local ESP_URL         = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/esp.luau"
-local WALKSPEED_URL   = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/walkspeed.luau"
-local SHOWCOMP_URL    = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/showcomputer.luau"
+local FPS_URL          = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Settings/fps.luau"
+local ESP_URL          = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/esp.luau"
+local WALKSPEED_URL    = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Universal/walkspeed.luau"
+local SHOWCOMP_URL     = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/showcomputer.luau"
+local SHOWBALLPIT_URL  = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/showballpit.luau"
 
-local FPS              = loadstring(game:HttpGet(FPS_URL))()
-local ESPModule        = loadstring(game:HttpGet(ESP_URL))()
-local WalkspeedModule  = loadstring(game:HttpGet(WALKSPEED_URL))()
-local ShowComputerMod  = loadstring(game:HttpGet(SHOWCOMP_URL))()
+local FPS             = loadstring(game:HttpGet(FPS_URL))()
+local ESPModule       = loadstring(game:HttpGet(ESP_URL))()
+local WalkspeedModule = loadstring(game:HttpGet(WALKSPEED_URL))()
+local ShowComputerMod = loadstring(game:HttpGet(SHOWCOMP_URL))()
+local ShowBallPitMod  = loadstring(game:HttpGet(SHOWBALLPIT_URL))()
 
 -- =================== UI CONSTS ===================
 local TITLEBAR_H, SIDEBAR_W, PAD = 36, 200, 8
@@ -149,7 +152,7 @@ local body = make("Frame", {
 })
 body.Parent = win
 
--- Sidebar à esquerda
+-- Sidebar
 local sidebar = make("ScrollingFrame", {
 	Name="Sidebar",
 	BackgroundColor3=COLORS.PANEL, BorderSizePixel=0,
@@ -167,7 +170,7 @@ local sbList = make("UIListLayout", { Padding=UDim.new(0,6) })
 sbList.Parent = sidebar
 forceYScroll(sidebar)
 
--- Conteúdo à direita
+-- Conteúdo
 local content = make("ScrollingFrame", {
 	Name="Content",
 	BackgroundColor3=COLORS.PANEL, BorderSizePixel=0,
@@ -212,7 +215,7 @@ for _, name in ipairs(SECTIONS) do
 end
 setActive(SECTIONS[1])
 
--- SETTINGS: FPS
+-- =============== SETTINGS: Show FPS ===============
 local fpsEnabled, fpsWin = false, nil
 do
 	local settings = sectionFrames["Settings"]
@@ -254,9 +257,12 @@ do
 	end)
 end
 
--- FIVE NIGHTS: ESP + Walkspeed + Show Computers
-local espEnabled, espCtl, walkCtl = false, nil, WalkspeedModule.new()
-local scEnabled, scCtl = false, nil
+-- ===== FIVE NIGHTS: ESP + Show Computers + Show Ball Pits + Walkspeed =====
+local espEnabled, espCtl = false, nil
+local scEnabled, scCtl   = false, nil
+local bpEnabled, bpCtl   = false, nil
+local walkCtl            = WalkspeedModule.new()
+
 do
 	local fnH = sectionFrames["Five Nights: Hunted"]
 
@@ -296,35 +302,112 @@ do
 		end
 	end)
 
-	-- Walkspeed (tecla + base/boost)
+	-- Show Computers (verde) — acima do Walkspeed
+	make("TextLabel", {
+		Text="Show Computers", Font=Enum.Font.GothamBold, TextSize=16,
+		TextColor3=COLORS.TEXT, BackgroundTransparency=1,
+		Size=UDim2.fromOffset(200,26), Position=UDim2.fromOffset(4,40)
+	}).Parent = fnH
+	local scSwitch = make("TextButton", {
+		Text="", BackgroundColor3=COLORS.BTN, AutoButtonColor=true,
+		Size=UDim2.fromOffset(54,26), Position=UDim2.fromOffset(220,40)
+	}, { make("UICorner",{CornerRadius=UDim.new(0,13)}) })
+	scSwitch.Parent = fnH
+	local scBall = make("Frame", {
+		Size=UDim2.fromOffset(22,22), Position=UDim2.fromOffset(2,2),
+		BackgroundColor3=Color3.fromRGB(200,200,200)
+	}, { make("UICorner",{CornerRadius=UDim.new(0,11)}) })
+	scBall.Parent = scSwitch
+	local function setSCSwitch(on: boolean)
+		if on then
+			scBall:TweenPosition(UDim2.fromOffset(30,2),"Out","Quad",0.15,true)
+			scBall.BackgroundColor3 = COLORS.ACCENT
+		else
+			scBall:TweenPosition(UDim2.fromOffset(2,2),"Out","Quad",0.15,true)
+			scBall.BackgroundColor3 = Color3.fromRGB(200,200,200)
+		end
+	end
+	scSwitch.MouseButton1Click:Connect(function()
+		scEnabled = not scEnabled
+		setSCSwitch(scEnabled)
+		if scEnabled then
+			if not scCtl then scCtl = ShowComputerMod.new({color = Color3.fromRGB(0,255,0), name = "computer"}) end
+			scCtl:Enable()
+		else
+			if scCtl then scCtl:Disable() end
+		end
+	end)
+
+	-- Show Ball Pits (vermelho) — NOVO, abaixo do Show Computers
+	make("TextLabel", {
+		Text="Show Ball Pits", Font=Enum.Font.GothamBold, TextSize=16,
+		TextColor3=COLORS.TEXT, BackgroundTransparency=1,
+		Size=UDim2.fromOffset(200,26), Position=UDim2.fromOffset(4,86)
+	}).Parent = fnH
+	local bpSwitch = make("TextButton", {
+		Text="", BackgroundColor3=COLORS.BTN, AutoButtonColor=true,
+		Size=UDim2.fromOffset(54,26), Position=UDim2.fromOffset(220,86)
+	}, { make("UICorner",{CornerRadius=UDim.new(0,13)}) })
+	bpSwitch.Parent = fnH
+	local bpBall = make("Frame", {
+		Size=UDim2.fromOffset(22,22), Position=UDim2.fromOffset(2,2),
+		BackgroundColor3=Color3.fromRGB(200,200,200)
+	}, { make("UICorner",{CornerRadius=UDim.new(0,11)}) })
+	bpBall.Parent = bpSwitch
+	local function setBPSwitch(on: boolean)
+		if on then
+			bpBall:TweenPosition(UDim2.fromOffset(30,2),"Out","Quad",0.15,true)
+			bpBall.BackgroundColor3 = COLORS.ACCENT
+		else
+			bpBall:TweenPosition(UDim2.fromOffset(2,2),"Out","Quad",0.15,true)
+			bpBall.BackgroundColor3 = Color3.fromRGB(200,200,200)
+		end
+	end
+	bpSwitch.MouseButton1Click:Connect(function()
+		bpEnabled = not bpEnabled
+		setBPSwitch(bpEnabled)
+		if bpEnabled then
+			if not bpCtl then bpCtl = ShowBallPitMod.new({color = Color3.fromRGB(255,0,0), name = "ball pit"}) end
+			bpCtl:Enable()
+		else
+			if bpCtl then bpCtl:Disable() end
+		end
+	end)
+
+	-- Walkspeed (foi jogado mais pra baixo por causa do Ball Pit)
 	make("TextLabel", {
 		Text="Walkspeed", Font=Enum.Font.GothamBold, TextSize=16,
 		TextColor3=COLORS.TEXT, BackgroundTransparency=1,
-		Size=UDim2.fromOffset(200,26), Position=UDim2.fromOffset(4,40),
+		Size=UDim2.fromOffset(200,26), Position=UDim2.fromOffset(4,132),
 		TextXAlignment=Enum.TextXAlignment.Left
 	}).Parent = fnH
+
 	local wsKeyBtn = make("TextButton", {
 		Text="Set Key", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT,
 		BackgroundColor3=COLORS.BTN, Size=UDim2.fromOffset(100,26),
-		Position=UDim2.fromOffset(220,40)
+		Position=UDim2.fromOffset(220,132)
 	}); wsKeyBtn.Parent = fnH
+
 	local clearBtn = make("TextButton", {
 		Text="Clear Key", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT,
 		BackgroundColor3=COLORS.BTN, Size=UDim2.fromOffset(100,26),
-		Position=UDim2.fromOffset(330,40)
+		Position=UDim2.fromOffset(330,132)
 	}); clearBtn.Parent = fnH
+
 	local baseBox = make("TextBox", {
 		Text="16", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT,
 		BackgroundColor3=COLORS.PANEL, Size=UDim2.fromOffset(60,26),
-		Position=UDim2.fromOffset(220,75)
+		Position=UDim2.fromOffset(220,167)
 	}); baseBox.Parent = fnH
+
 	local boostBox = make("TextBox", {
 		Text="32", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT,
 		BackgroundColor3=COLORS.PANEL, Size=UDim2.fromOffset(60,26),
-		Position=UDim2.fromOffset(290,75)
+		Position=UDim2.fromOffset(290,167)
 	}); boostBox.Parent = fnH
-	make("TextLabel", {Text="Base",  Font=Enum.Font.Gotham, TextSize=12, TextColor3=COLORS.MUTED, BackgroundTransparency=1, Size=UDim2.fromOffset(40,20), Position=UDim2.fromOffset(220,100)}).Parent = fnH
-	make("TextLabel", {Text="Boost", Font=Enum.Font.Gotham, TextSize=12, TextColor3=COLORS.MUTED, BackgroundTransparency=1, Size=UDim2.fromOffset(40,20), Position=UDim2.fromOffset(290,100)}).Parent = fnH
+
+	make("TextLabel",{Text="Base",  Font=Enum.Font.Gotham, TextSize=12, TextColor3=COLORS.MUTED, BackgroundTransparency=1, Size=UDim2.fromOffset(40,20), Position=UDim2.fromOffset(220,192)}).Parent = fnH
+	make("TextLabel",{Text="Boost", Font=Enum.Font.Gotham, TextSize=12, TextColor3=COLORS.MUTED, BackgroundTransparency=1, Size=UDim2.fromOffset(40,20), Position=UDim2.fromOffset(290,192)}).Parent = fnH
 
 	local currentKey: Enum.KeyCode? = nil
 	wsKeyBtn.MouseButton1Click:Connect(function()
@@ -348,43 +431,6 @@ do
 	end
 	baseBox.FocusLost:Connect(updateSpeeds)
 	boostBox.FocusLost:Connect(updateSpeeds)
-
-	-- Show Computers
-	make("TextLabel", {
-		Text="Show Computers", Font=Enum.Font.GothamBold, TextSize=16,
-		TextColor3=COLORS.TEXT, BackgroundTransparency=1,
-		Size=UDim2.fromOffset(200,26), Position=UDim2.fromOffset(4,130)
-	}).Parent = fnH
-	local scSwitch = make("TextButton", {
-		Text="", BackgroundColor3=COLORS.BTN, AutoButtonColor=true,
-		Size=UDim2.fromOffset(54,26), Position=UDim2.fromOffset(220,130)
-	}, { make("UICorner",{CornerRadius=UDim.new(0,13)}) })
-	scSwitch.Parent = fnH
-	local scBall = make("Frame", {
-		Size=UDim2.fromOffset(22,22), Position=UDim2.fromOffset(2,2),
-		BackgroundColor3=Color3.fromRGB(200,200,200)
-	}, { make("UICorner",{CornerRadius=UDim.new(0,11)}) })
-	scBall.Parent = scSwitch
-	local scEnabled, scCtl = false, nil
-	local function setSCSwitch(on: boolean)
-		if on then
-			scBall:TweenPosition(UDim2.fromOffset(30,2),"Out","Quad",0.15,true)
-			scBall.BackgroundColor3 = COLORS.ACCENT
-		else
-			scBall:TweenPosition(UDim2.fromOffset(2,2),"Out","Quad",0.15,true)
-			scBall.BackgroundColor3 = Color3.fromRGB(200,200,200)
-		end
-	end
-	scSwitch.MouseButton1Click:Connect(function()
-		scEnabled = not scEnabled
-		setSCSwitch(scEnabled)
-		if scEnabled then
-			if not scCtl then scCtl = ShowComputerMod.new({color = Color3.fromRGB(0,255,0), name = "computer"}) end
-			scCtl:Enable()
-		else
-			if scCtl then scCtl:Disable() end
-		end
-	end)
 end
 
 -- Fechar + F1
@@ -397,5 +443,3 @@ UIS.InputBegan:Connect(function(input,gp)
 		win.Visible = not win.Visible
 	end
 end)
-
-print("KScripts: GUI carregada (FPS + ESP + Walkspeed + Show Computers).")
