@@ -11,6 +11,7 @@ local ESP_URL          = "https://raw.githubusercontent.com/kaleobraghinidasilva
 local WALKSPEED_URL    = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/walkspeed.luau"
 local SHOWCOMP_URL     = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/showcomputer.luau"
 local SHOWBALLPIT_URL  = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/showballpit.luau"
+local SHOWLOCKERS_URL  = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/showlockers.luau"
 
 -- ========= helpers de UI =========
 local TITLEBAR_H, SIDEBAR_W, PAD = 36, 200, 8
@@ -139,6 +140,7 @@ local ESPModule        = select(1, safeFetch(ESP_URL,         "esp"))
 local WalkspeedModule  = select(1, safeFetch(WALKSPEED_URL,   "walkspeed"))
 local ShowComputerMod  = select(1, safeFetch(SHOWCOMP_URL,    "showcomputer"))
 local ShowBallPitMod   = select(1, safeFetch(SHOWBALLPIT_URL, "showballpit"))
+local ShowLockersMod   = select(1, safeFetch(SHOWLOCKERS_URL,  "showlockers"))
 
 -- ========= janela principal =========
 local startPos = centerOffset(DEFAULT_SIZE)
@@ -364,12 +366,60 @@ do
 		end
 	end)
 
-	-- Show Ball Pits (vermelho)
+  -- Show Ball Pits (vermelho)
 	make("TextLabel", {
 		Text="Show Ball Pits", Font=Enum.Font.GothamBold, TextSize=16,
 		TextColor3=COLORS.TEXT, BackgroundTransparency=1,
 		Size=UDim2.fromOffset(200,26), Position=UDim2.fromOffset(4,86)
-	}).Parent = fnH
+	}).
+	
+-- Show Occupied Lockers (azul)
+local slEnabled, slCtl = false, nil
+
+make("TextLabel", {
+    Text="Show Occupied Lockers",
+    Font=Enum.Font.GothamBold, TextSize=16, TextColor3=COLORS.TEXT,
+    BackgroundTransparency=1, Size=UDim2.fromOffset(260,26),
+    Position=UDim2.fromOffset(4, 132)  -- ajuste se já houver outros itens
+}).Parent = fnH
+
+local slSwitch = make("TextButton", {
+    Text="", BackgroundColor3=COLORS.BTN, AutoButtonColor=true,
+    Size=UDim2.fromOffset(54,26),
+    Position=UDim2.fromOffset(280, 132)
+}, { make("UICorner",{CornerRadius=UDim.new(0,13)}) })
+slSwitch.Parent = fnH
+
+local slBall = make("Frame", {
+    Size=UDim2.fromOffset(22,22),
+    Position=UDim2.fromOffset(2,2),
+    BackgroundColor3=Color3.fromRGB(200,200,200)
+}, { make("UICorner",{CornerRadius=UDim.new(0,11)}) })
+slBall.Parent = slSwitch
+
+local function setSLSwitch(on: boolean)
+    if on then
+        slBall:TweenPosition(UDim2.fromOffset(30,2),"Out","Quad",0.15,true)
+        slBall.BackgroundColor3 = COLORS.ACCENT
+    else
+        slBall:TweenPosition(UDim2.fromOffset(2,2),"Out","Quad",0.15,true)
+        slBall.BackgroundColor3 = Color3.fromRGB(200,200,200)
+    end
+end
+
+slSwitch.MouseButton1Click:Connect(function()
+    if not ShowLockersMod then showToast("Módulo Show Lockers ausente"); return end
+    slEnabled = not slEnabled
+    setSLSwitch(slEnabled)
+    if slEnabled then
+        if not slCtl then
+            slCtl = ShowLockersMod.new({ color = Color3.fromRGB(58,130,247) }) -- azul
+        end
+        slCtl:Enable()
+    else
+        if slCtl then slCtl:Disable() end
+    end
+end) = fnH
 	local bpSwitch = make("TextButton", {
 		Text="", BackgroundColor3=COLORS.BTN, AutoButtonColor=true,
 		Size=UDim2.fromOffset(54,26), Position=UDim2.fromOffset(220,86)
