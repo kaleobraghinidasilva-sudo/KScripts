@@ -1,11 +1,10 @@
 -- main.luau — KScripts (layout original) + Settings (Show FPS)
--- + Five Nights: Hunted (ESP + Walkspeed + Show Computers + Show Ball Pits)
--- Corrigido: (1) caminhos; (2) fetch de módulos sem desalinhamento.
+-- + Five Nights: Hunted (ESP + Show Computers + Show Occupied Lockers + Show Ball Pits + Walkspeed)
 
 local Players = game:GetService("Players")
 local UIS     = game:GetService("UserInputService")
 
--- URLs (ajustadas à sua estrutura atual)
+-- ========= URLs dos módulos =========
 local FPS_URL          = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Settings/showfps.luau"
 local ESP_URL          = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/esp.luau"
 local WALKSPEED_URL    = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/walkspeed.luau"
@@ -14,7 +13,7 @@ local SHOWBALLPIT_URL  = "https://raw.githubusercontent.com/kaleobraghinidasilva
 local SHOWLOCKERS_URL  = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/showlockers.luau"
 
 -- ========= helpers de UI =========
-local TITLEBAR_H, SIDEBAR_W, PAD = 36, 200, 8
+local TITLEBAR_H, PAD = 36, 8
 local DEFAULT_SIZE = Vector2.new(860, 520)
 local SECTIONS = { "Universal", "Five Nights: Hunted", "Settings" }
 
@@ -34,18 +33,18 @@ local function make(class, props, kids)
 	return o
 end
 
-local function centerOffset(size: Vector2)
+local function centerOffset(size)
 	local cam = workspace.CurrentCamera
 	local vp  = cam and cam.ViewportSize or Vector2.new(1280,720)
 	return Vector2.new(math.floor((vp.X-size.X)/2), math.floor((vp.Y-size.Y)/2))
 end
 
-local function attachDrag(frame: Frame, handle: GuiObject)
+local function attachDrag(frame, handle)
 	handle.Active = true
 	local dragging, dragInput = false, nil
 	local dragStart, startPos = Vector2.zero, UDim2.fromOffset(0,0)
 
-	local function update(input: InputObject)
+	local function update(input)
 		local d = input.Position - dragStart
 		local vp = workspace.CurrentCamera.ViewportSize
 		local newX = math.clamp(startPos.X.Offset + d.X, 0, vp.X - frame.AbsoluteSize.X)
@@ -71,7 +70,7 @@ local function attachDrag(frame: Frame, handle: GuiObject)
 	end)
 end
 
-local function forceYScroll(sf: ScrollingFrame)
+local function forceYScroll(sf)
 	local function upd()
 		local a = sf.AbsoluteSize
 		sf.CanvasSize = UDim2.new(0, a.X, 0, a.Y + 1)
@@ -80,7 +79,7 @@ local function forceYScroll(sf: ScrollingFrame)
 	sf:GetPropertyChangedSignal("AbsoluteSize"):Connect(upd)
 end
 
--- ========= ROOT GUI =========
+-- ========= ROOT GUI + Toast =========
 local player    = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
@@ -89,12 +88,12 @@ local rootGui = make("ScreenGui", {
 })
 rootGui.Parent = playerGui
 
--- Toast
 local toastGui = make("ScreenGui", {
 	Name="KScriptsToast", ResetOnSpawn=false, IgnoreGuiInset=true, DisplayOrder=10000
 })
 toastGui.Parent = playerGui
-local function showToast(msg: string, duration: number?)
+
+local function showToast(msg, duration)
 	duration = duration or 3.5
 	local holder = make("Frame", {
 		AnchorPoint=Vector2.new(1,1),
@@ -115,32 +114,32 @@ local function showToast(msg: string, duration: number?)
 end
 
 -- ========= carregador robusto =========
-local function safeFetch(url: string, name: string)
+local function safeFetch(url, name)
 	local okGet, src = pcall(function() return game:HttpGet(url) end)
 	if not okGet then
 		showToast(("Falha ao baixar módulo '%s'"):format(name))
-		return nil, ("HttpGet fail: %s"):format(name)
+		return nil
 	end
 	local okChunk, chunk = pcall(loadstring, src)
 	if not okChunk then
 		showToast(("Falha ao compilar módulo '%s'"):format(name))
-		return nil, ("loadstring fail: %s"):format(name)
+		return nil
 	end
 	local okRet, mod = pcall(chunk)
 	if not okRet then
 		showToast(("Falha ao iniciar módulo '%s'"):format(name))
-		return nil, ("chunk run fail: %s"):format(name)
+		return nil
 	end
-	return mod, nil
+	return mod
 end
 
--- NADA de múltiplos retornos aqui. Cada fetch em sua linha:
-local FPS              = select(1, safeFetch(FPS_URL,         "showfps"))
-local ESPModule        = select(1, safeFetch(ESP_URL,         "esp"))
-local WalkspeedModule  = select(1, safeFetch(WALKSPEED_URL,   "walkspeed"))
-local ShowComputerMod  = select(1, safeFetch(SHOWCOMP_URL,    "showcomputer"))
-local ShowBallPitMod   = select(1, safeFetch(SHOWBALLPIT_URL, "showballpit"))
-local ShowLockersMod   = select(1, safeFetch(SHOWLOCKERS_URL,  "showlockers"))
+-- (1 linha por módulo! Nada de declarar vários de uma vez)
+local FPS             = safeFetch(FPS_URL,         "showfps")
+local ESPModule       = safeFetch(ESP_URL,         "esp")
+local WalkspeedModule = safeFetch(WALKSPEED_URL,   "walkspeed")
+local ShowComputerMod = safeFetch(SHOWCOMP_URL,    "showcomputer")
+local ShowBallPitMod  = safeFetch(SHOWBALLPIT_URL, "showballpit")
+local ShowLockersMod  = safeFetch(SHOWLOCKERS_URL, "showlockers")
 
 -- ========= janela principal =========
 local startPos = centerOffset(DEFAULT_SIZE)
@@ -212,7 +211,7 @@ forceYScroll(content)
 
 -- Seções
 local sectionFrames, sidebarButtons = {}, {}
-local function setActive(name: string)
+local function setActive(name)
 	for n,btn in pairs(sidebarButtons) do
 		btn.BackgroundColor3 = (n==name) and COLORS.ACCENT or COLORS.BTN
 		btn.TextColor3       = COLORS.TEXT
@@ -261,7 +260,7 @@ do
 	}, { make("UICorner",{CornerRadius=UDim.new(0,11)}) })
 	ball.Parent = switch
 
-	local function setSwitch(on: boolean)
+	local function setSwitch(on)
 		if on then
 			ball:TweenPosition(UDim2.fromOffset(30,2),"Out","Quad",0.15,true)
 			ball.BackgroundColor3 = COLORS.ACCENT
@@ -283,11 +282,12 @@ do
 	end)
 end
 
--- ===== Five Nights: ESP + Show Computers + Show Ball Pits + Walkspeed =====
+-- ===== Five Nights: ESP + Computers + Occupied Lockers + Ball Pits + Walkspeed =====
 local espEnabled, espCtl = false, nil
 local scEnabled, scCtl   = false, nil
+local slEnabled, slCtl   = false, nil
 local bpEnabled, bpCtl   = false, nil
-local walkCtl = WalkspeedModule and WalkspeedModule.new() or nil
+local walkCtl            = WalkspeedModule and WalkspeedModule.new() or nil
 
 do
 	local fnH = sectionFrames["Five Nights: Hunted"]
@@ -308,7 +308,7 @@ do
 		BackgroundColor3=Color3.fromRGB(200,200,200)
 	}, { make("UICorner",{CornerRadius=UDim.new(0,11)}) })
 	espBall.Parent = espSwitch
-	local function setESPSwitch(on: boolean)
+	local function setESPSwitch(on)
 		if on then
 			espBall:TweenPosition(UDim2.fromOffset(30,2),"Out","Quad",0.15,true)
 			espBall.BackgroundColor3 = COLORS.ACCENT
@@ -345,7 +345,7 @@ do
 		BackgroundColor3=Color3.fromRGB(200,200,200)
 	}, { make("UICorner",{CornerRadius=UDim.new(0,11)}) })
 	scBall.Parent = scSwitch
-	local function setSCSwitch(on: boolean)
+	local function setSCSwitch(on)
 		if on then
 			scBall:TweenPosition(UDim2.fromOffset(30,2),"Out","Quad",0.15,true)
 			scBall.BackgroundColor3 = COLORS.ACCENT
@@ -366,63 +366,52 @@ do
 		end
 	end)
 
-  -- Show Ball Pits (vermelho)
+	-- Show Occupied Lockers (azul)  <<< AQUI ANTES DE BALL PITS
+	make("TextLabel", {
+		Text="Show Occupied Lockers", Font=Enum.Font.GothamBold, TextSize=16,
+		TextColor3=COLORS.TEXT, BackgroundTransparency=1,
+		Size=UDim2.fromOffset(260,26), Position=UDim2.fromOffset(4,86)
+	}).Parent = fnH
+	local slSwitch = make("TextButton", {
+		Text="", BackgroundColor3=COLORS.BTN, AutoButtonColor=true,
+		Size=UDim2.fromOffset(54,26), Position=UDim2.fromOffset(280,86)
+	}, { make("UICorner",{CornerRadius=UDim.new(0,13)}) })
+	slSwitch.Parent = fnH
+	local slBall = make("Frame", {
+		Size=UDim2.fromOffset(22,22), Position=UDim2.fromOffset(2,2),
+		BackgroundColor3=Color3.fromRGB(200,200,200)
+	}, { make("UICorner",{CornerRadius=UDim.new(0,11)}) })
+	slBall.Parent = slSwitch
+	local function setSLSwitch(on)
+		if on then
+			slBall:TweenPosition(UDim2.fromOffset(30,2),"Out","Quad",0.15,true)
+			slBall.BackgroundColor3 = COLORS.ACCENT
+		else
+			slBall:TweenPosition(UDim2.fromOffset(2,2),"Out","Quad",0.15,true)
+			slBall.BackgroundColor3 = Color3.fromRGB(200,200,200)
+		end
+	end
+	slSwitch.MouseButton1Click:Connect(function()
+		if not ShowLockersMod then showToast("Módulo Show Lockers ausente"); return end
+		slEnabled = not slEnabled
+		setSLSwitch(slEnabled)
+		if slEnabled then
+			if not slCtl then slCtl = ShowLockersMod.new({ color = Color3.fromRGB(58,130,247) }) end
+			slCtl:Enable()
+		else
+			if slCtl then slCtl:Disable() end
+		end
+	end)
+
+	-- Show Ball Pits (vermelho)
 	make("TextLabel", {
 		Text="Show Ball Pits", Font=Enum.Font.GothamBold, TextSize=16,
 		TextColor3=COLORS.TEXT, BackgroundTransparency=1,
-		Size=UDim2.fromOffset(200,26), Position=UDim2.fromOffset(4,86)
-	}).
-	
--- Show Occupied Lockers (azul)
-local slEnabled, slCtl = false, nil
-
-make("TextLabel", {
-    Text="Show Occupied Lockers",
-    Font=Enum.Font.GothamBold, TextSize=16, TextColor3=COLORS.TEXT,
-    BackgroundTransparency=1, Size=UDim2.fromOffset(260,26),
-    Position=UDim2.fromOffset(4, 132)  -- ajuste se já houver outros itens
-}).Parent = fnH
-
-local slSwitch = make("TextButton", {
-    Text="", BackgroundColor3=COLORS.BTN, AutoButtonColor=true,
-    Size=UDim2.fromOffset(54,26),
-    Position=UDim2.fromOffset(280, 132)
-}, { make("UICorner",{CornerRadius=UDim.new(0,13)}) })
-slSwitch.Parent = fnH
-
-local slBall = make("Frame", {
-    Size=UDim2.fromOffset(22,22),
-    Position=UDim2.fromOffset(2,2),
-    BackgroundColor3=Color3.fromRGB(200,200,200)
-}, { make("UICorner",{CornerRadius=UDim.new(0,11)}) })
-slBall.Parent = slSwitch
-
-local function setSLSwitch(on: boolean)
-    if on then
-        slBall:TweenPosition(UDim2.fromOffset(30,2),"Out","Quad",0.15,true)
-        slBall.BackgroundColor3 = COLORS.ACCENT
-    else
-        slBall:TweenPosition(UDim2.fromOffset(2,2),"Out","Quad",0.15,true)
-        slBall.BackgroundColor3 = Color3.fromRGB(200,200,200)
-    end
-end
-
-slSwitch.MouseButton1Click:Connect(function()
-    if not ShowLockersMod then showToast("Módulo Show Lockers ausente"); return end
-    slEnabled = not slEnabled
-    setSLSwitch(slEnabled)
-    if slEnabled then
-        if not slCtl then
-            slCtl = ShowLockersMod.new({ color = Color3.fromRGB(58,130,247) }) -- azul
-        end
-        slCtl:Enable()
-    else
-        if slCtl then slCtl:Disable() end
-    end
-end) = fnH
+		Size=UDim2.fromOffset(200,26), Position=UDim2.fromOffset(4,132)
+	}).Parent = fnH
 	local bpSwitch = make("TextButton", {
 		Text="", BackgroundColor3=COLORS.BTN, AutoButtonColor=true,
-		Size=UDim2.fromOffset(54,26), Position=UDim2.fromOffset(220,86)
+		Size=UDim2.fromOffset(54,26), Position=UDim2.fromOffset(220,132)
 	}, { make("UICorner",{CornerRadius=UDim.new(0,13)}) })
 	bpSwitch.Parent = fnH
 	local bpBall = make("Frame", {
@@ -430,7 +419,7 @@ end) = fnH
 		BackgroundColor3=Color3.fromRGB(200,200,200)
 	}, { make("UICorner",{CornerRadius=UDim.new(0,11)}) })
 	bpBall.Parent = bpSwitch
-	local function setBPSwitch(on: boolean)
+	local function setBPSwitch(on)
 		if on then
 			bpBall:TweenPosition(UDim2.fromOffset(30,2),"Out","Quad",0.15,true)
 			bpBall.BackgroundColor3 = COLORS.ACCENT
@@ -455,38 +444,38 @@ end) = fnH
 	make("TextLabel", {
 		Text="Walkspeed", Font=Enum.Font.GothamBold, TextSize=16,
 		TextColor3=COLORS.TEXT, BackgroundTransparency=1,
-		Size=UDim2.fromOffset(200,26), Position=UDim2.fromOffset(4,132),
+		Size=UDim2.fromOffset(200,26), Position=UDim2.fromOffset(4,178),
 		TextXAlignment=Enum.TextXAlignment.Left
 	}).Parent = fnH
 
 	local wsKeyBtn = make("TextButton", {
 		Text="Set Key", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT,
 		BackgroundColor3=COLORS.BTN, Size=UDim2.fromOffset(100,26),
-		Position=UDim2.fromOffset(220,132)
+		Position=UDim2.fromOffset(220,178)
 	}); wsKeyBtn.Parent = fnH
 
 	local clearBtn = make("TextButton", {
 		Text="Clear Key", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT,
 		BackgroundColor3=COLORS.BTN, Size=UDim2.fromOffset(100,26),
-		Position=UDim2.fromOffset(330,132)
+		Position=UDim2.fromOffset(330,178)
 	}); clearBtn.Parent = fnH
 
 	local baseBox = make("TextBox", {
 		Text="16", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT,
 		BackgroundColor3=COLORS.PANEL, Size=UDim2.fromOffset(60,26),
-		Position=UDim2.fromOffset(220,167)
+		Position=UDim2.fromOffset(220,213)
 	}); baseBox.Parent = fnH
 
 	local boostBox = make("TextBox", {
 		Text="32", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=COLORS.TEXT,
 		BackgroundColor3=COLORS.PANEL, Size=UDim2.fromOffset(60,26),
-		Position=UDim2.fromOffset(290,167)
+		Position=UDim2.fromOffset(290,213)
 	}); boostBox.Parent = fnH
 
-	make("TextLabel",{Text="Base",  Font=Enum.Font.Gotham, TextSize=12, TextColor3=COLORS.MUTED, BackgroundTransparency=1, Size=UDim2.fromOffset(40,20), Position=UDim2.fromOffset(220,192)}).Parent = fnH
-	make("TextLabel",{Text="Boost", Font=Enum.Font.Gotham, TextSize=12, TextColor3=COLORS.MUTED, BackgroundTransparency=1, Size=UDim2.fromOffset(40,20), Position=UDim2.fromOffset(290,192)}).Parent = fnH
+	make("TextLabel",{Text="Base",  Font=Enum.Font.Gotham, TextSize=12, TextColor3=COLORS.MUTED, BackgroundTransparency=1, Size=UDim2.fromOffset(40,20), Position=UDim2.fromOffset(220,238)}).Parent = fnH
+	make("TextLabel",{Text="Boost", Font=Enum.Font.Gotham, TextSize=12, TextColor3=COLORS.MUTED, BackgroundTransparency=1, Size=UDim2.fromOffset(40,20), Position=UDim2.fromOffset(290,238)}).Parent = fnH
 
-	local currentKey: Enum.KeyCode? = nil
+	local currentKey = nil
 	wsKeyBtn.MouseButton1Click:Connect(function()
 		if not walkCtl then showToast("Módulo Walkspeed ausente"); return end
 		wsKeyBtn.Text="Press..."
@@ -523,3 +512,5 @@ UIS.InputBegan:Connect(function(input,gp)
 		win.Visible = not win.Visible
 	end
 end)
+
+print("KScripts: GUI carregada.")
