@@ -1,5 +1,4 @@
--- Destaca "New Locker" quando o atributo IsOccupied for true (azul).
--- Tolerante a nomes: NewLocker / New Locker / NEW-LOCKER / new_locker
+-- Destaca "NewLocker" quando o atributo IsOccupied for true (azul).
 -- API:
 --   local m = ShowLockers.new({ color = Color3.fromRGB(58,130,247) })
 --   m:Enable() / m:Disable() / m:Destroy()
@@ -15,17 +14,9 @@ local function cameraParent()
 		or Workspace
 end
 
-local function normalize(s)
-	s = string.lower(s)
-	s = s:gsub("[_%-]+", " ")
-	s = s:gsub("^%s+", ""):gsub("%s+$", "")
-	s = s:gsub("%s+", " ")
-	return s
-end
-
 local function isNewLockerModel(model)
-	local n = normalize(model.Name or "")
-	return n:find("new locker", 1, true) ~= nil or n:find("newlocker", 1, true) ~= nil
+	if not model:IsA("Model") then return false end
+	return string.lower(model.Name) == "newlocker"
 end
 
 local function makeHighlight(adornee, color)
@@ -76,12 +67,6 @@ function ShowLockers:_ensureTracked(model)
 		if not parent then self:_cleanup(model) end
 	end))
 
-	table.insert(conns, model:GetPropertyChangedSignal("Name"):Connect(function()
-		if not isNewLockerModel(model) then
-			self:_cleanup(model)
-		end
-	end))
-
 	table.insert(conns, model:GetAttributeChangedSignal("IsOccupied"):Connect(function()
 		self:_apply(model)
 	end))
@@ -102,9 +87,7 @@ function ShowLockers:_consider(inst)
 	if not model:IsA("Model") then
 		model = inst:FindFirstAncestorOfClass("Model")
 	end
-	if not model or not model:IsA("Model") then return end
-	if not isNewLockerModel(model) then return end
-
+	if not model or not isNewLockerModel(model) then return end
 	self:_ensureTracked(model)
 	self:_apply(model)
 end
@@ -127,10 +110,8 @@ end
 function ShowLockers:Disable()
 	if not self.enabled then return end
 	self.enabled = false
-
 	for _,c in ipairs(self._conns) do pcall(function() c:Disconnect() end) end
 	self._conns = {}
-
 	for m,_ in pairs(self._tracked) do
 		self:_cleanup(m)
 	end

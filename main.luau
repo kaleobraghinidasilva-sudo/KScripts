@@ -9,7 +9,6 @@ local FPS_URL          = "https://raw.githubusercontent.com/kaleobraghinidasilva
 local ESP_URL          = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/esp.luau"
 local WALKSPEED_URL    = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/walkspeed.luau"
 local SHOWCOMP_URL     = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/showcomputer.luau"
-local SHOWBALLPIT_URL  = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/showballpit.luau"
 local SHOWLOCKERS_URL  = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/showlockers.luau"
 
 -- ========= helpers de UI =========
@@ -138,7 +137,6 @@ local FPS             = safeFetch(FPS_URL,         "showfps")
 local ESPModule       = safeFetch(ESP_URL,         "esp")
 local WalkspeedModule = safeFetch(WALKSPEED_URL,   "walkspeed")
 local ShowComputerMod = safeFetch(SHOWCOMP_URL,    "showcomputer")
-local ShowBallPitMod  = safeFetch(SHOWBALLPIT_URL, "showballpit")
 local ShowLockersMod  = safeFetch(SHOWLOCKERS_URL, "showlockers")
 
 -- ========= janela principal =========
@@ -400,43 +398,6 @@ do
 			slCtl:Enable()
 		else
 			if slCtl then slCtl:Disable() end
-		end
-	end)
-
-	-- Show Ball Pits (vermelho)
-	make("TextLabel", {
-		Text="Show Ball Pits", Font=Enum.Font.GothamBold, TextSize=16,
-		TextColor3=COLORS.TEXT, BackgroundTransparency=1,
-		Size=UDim2.fromOffset(200,26), Position=UDim2.fromOffset(4,132)
-	}).Parent = fnH
-	local bpSwitch = make("TextButton", {
-		Text="", BackgroundColor3=COLORS.BTN, AutoButtonColor=true,
-		Size=UDim2.fromOffset(54,26), Position=UDim2.fromOffset(220,132)
-	}, { make("UICorner",{CornerRadius=UDim.new(0,13)}) })
-	bpSwitch.Parent = fnH
-	local bpBall = make("Frame", {
-		Size=UDim2.fromOffset(22,22), Position=UDim2.fromOffset(2,2),
-		BackgroundColor3=Color3.fromRGB(200,200,200)
-	}, { make("UICorner",{CornerRadius=UDim.new(0,11)}) })
-	bpBall.Parent = bpSwitch
-	local function setBPSwitch(on)
-		if on then
-			bpBall:TweenPosition(UDim2.fromOffset(30,2),"Out","Quad",0.15,true)
-			bpBall.BackgroundColor3 = COLORS.ACCENT
-		else
-			bpBall:TweenPosition(UDim2.fromOffset(2,2),"Out","Quad",0.15,true)
-			bpBall.BackgroundColor3 = Color3.fromRGB(200,200,200)
-		end
-	end
-	bpSwitch.MouseButton1Click:Connect(function()
-		if not ShowBallPitMod then showToast("Módulo Show Ball Pits ausente"); return end
-		bpEnabled = not bpEnabled
-		setBPSwitch(bpEnabled)
-		if bpEnabled then
-			if not bpCtl then bpCtl = ShowBallPitMod.new({color = Color3.fromRGB(255,0,0), name = "ball pit"}) end
-			bpCtl:Enable()
-		else
-			if bpCtl then bpCtl:Disable() end
 		end
 	end)
 
