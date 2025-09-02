@@ -364,7 +364,7 @@ do
 		end
 	end)
 
-	-- Show Occupied Lockers (azul)  <<< AQUI ANTES DE BALL PITS
+	-- Show Occupied Lockers (azul)  <
 	make("TextLabel", {
 		Text="Show Occupied Lockers", Font=Enum.Font.GothamBold, TextSize=16,
 		TextColor3=COLORS.TEXT, BackgroundTransparency=1,
