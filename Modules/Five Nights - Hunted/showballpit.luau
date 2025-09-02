@@ -139,4 +139,4 @@ function M:Destroy()
 	self:Disable()
 end
 
-return ShowBallPit
+return M
