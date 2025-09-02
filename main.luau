@@ -1,11 +1,11 @@
--- main.luau — KScripts (layout original) + Settings (Show FPS) +
--- Five Nights: Hunted (ESP + Walkspeed + Show Computers + Show Ball Pits)
--- Hardened: se algum módulo remoto falhar, a GUI AINDA abre e mostra um toast de erro.
+-- main.luau — KScripts (layout original) + Settings (Show FPS)
+-- + Five Nights: Hunted (ESP + Walkspeed + Show Computers + Show Ball Pits)
+-- Corrigido: (1) caminhos; (2) fetch de módulos sem desalinhamento.
 
 local Players = game:GetService("Players")
 local UIS     = game:GetService("UserInputService")
 
--- URLs
+-- URLs (ajustadas à sua estrutura atual)
 local FPS_URL          = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Settings/showfps.luau"
 local ESP_URL          = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/esp.luau"
 local WALKSPEED_URL    = "https://raw.githubusercontent.com/kaleobraghinidasilva-sudo/KScripts/main/Modules/Five%20Nights%20-%20Hunted/walkspeed.luau"
@@ -113,7 +113,7 @@ local function showToast(msg: string, duration: number?)
 	task.delay(duration, function() if holder then holder:Destroy() end end)
 end
 
--- ========= carregador robusto de módulos =========
+-- ========= carregador robusto =========
 local function safeFetch(url: string, name: string)
 	local okGet, src = pcall(function() return game:HttpGet(url) end)
 	if not okGet then
@@ -133,10 +133,12 @@ local function safeFetch(url: string, name: string)
 	return mod, nil
 end
 
--- busca módulos (sem travar GUI se algo falhar)
-local FPS, ESPModule, WalkspeedModule, ShowComputerMod, ShowBallPitMod = safeFetch(FPS_URL,"fps"),
-	safeFetch(ESP_URL,"esp"), safeFetch(WALKSPEED_URL,"walkspeed"),
-	safeFetch(SHOWCOMP_URL,"showcomputer"), safeFetch(SHOWBALLPIT_URL,"showballpit")
+-- NADA de múltiplos retornos aqui. Cada fetch em sua linha:
+local FPS              = select(1, safeFetch(FPS_URL,         "showfps"))
+local ESPModule        = select(1, safeFetch(ESP_URL,         "esp"))
+local WalkspeedModule  = select(1, safeFetch(WALKSPEED_URL,   "walkspeed"))
+local ShowComputerMod  = select(1, safeFetch(SHOWCOMP_URL,    "showcomputer"))
+local ShowBallPitMod   = select(1, safeFetch(SHOWBALLPIT_URL, "showballpit"))
 
 -- ========= janela principal =========
 local startPos = centerOffset(DEFAULT_SIZE)
@@ -178,7 +180,7 @@ local sidebar = make("ScrollingFrame", {
 	BackgroundColor3=COLORS.PANEL, BorderSizePixel=0,
 	ScrollBarThickness=8, ScrollingDirection=Enum.ScrollingDirection.Y,
 	Active=true,
-	Size=UDim2.new(0, SIDEBAR_W, 1, 0),
+	Size=UDim2.new(0, 200, 1, 0),
 	Position=UDim2.fromOffset(0,0)
 }, { make("UICorner",{CornerRadius=UDim.new(0,10)}) })
 sidebar.Parent = body
@@ -196,8 +198,8 @@ local content = make("ScrollingFrame", {
 	BackgroundColor3=COLORS.PANEL, BorderSizePixel=0,
 	ScrollBarThickness=8, ScrollingDirection=Enum.ScrollingDirection.Y,
 	Active=true,
-	Position=UDim2.fromOffset(SIDEBAR_W + PAD, 0),
-	Size=UDim2.new(1, -(SIDEBAR_W + PAD), 1, 0)
+	Position=UDim2.fromOffset(200 + PAD, 0),
+	Size=UDim2.new(1, -(200 + PAD), 1, 0)
 }, { make("UICorner",{CornerRadius=UDim.new(0,10)}) })
 content.Parent = body
 make("UIPadding", {
@@ -211,6 +213,7 @@ local sectionFrames, sidebarButtons = {}, {}
 local function setActive(name: string)
 	for n,btn in pairs(sidebarButtons) do
 		btn.BackgroundColor3 = (n==name) and COLORS.ACCENT or COLORS.BTN
+		btn.TextColor3       = COLORS.TEXT
 	end
 	for n,fr in pairs(sectionFrames) do
 		fr.Visible = (n==name)
@@ -361,7 +364,7 @@ do
 		end
 	end)
 
-	-- Show Ball Pits (vermelho) — NOVO
+	-- Show Ball Pits (vermelho)
 	make("TextLabel", {
 		Text="Show Ball Pits", Font=Enum.Font.GothamBold, TextSize=16,
 		TextColor3=COLORS.TEXT, BackgroundTransparency=1,
